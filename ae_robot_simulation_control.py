@@ -41,17 +41,17 @@ class RobotNavigationControl:
         "AI2-THOR Version: " + ai2thor.__version__
 
     # Initialises controller
-    def initialise_controller(self):
+    def initialise_controller(self, third_party_cam = True):
         self.controller = Controller(
             agentMode="default",
             visibilityDistance=3,
-            scene="FloorPlan209",
+            scene="FloorPlan415",
             # image modalities
             #renderDepthImage=False,
             #renderInstanceSegmentation=False,
             # camera properties
-            width=400,
-            height=400,
+            width=600,
+            height=600,
             fieldOfView=120,
             # step sizes
             gridSize=0.25,
@@ -70,12 +70,13 @@ class RobotNavigationControl:
             #print("actionReturn : " + controller.last_event.metadata["actionReturn"])
 
 
-        event = self.controller.step(
-            action="AddThirdPartyCamera",
-            position=dict(x=-4.25, y=2, z=-2.5),
-            rotation=dict(x=90, y=0, z=0),
-            fieldOfView=120
-        )
+        if (third_party_cam):
+            event = self.controller.step(
+                action="AddThirdPartyCamera",
+                position=dict(x=-4.25, y=2, z=-2.5),
+                rotation=dict(x=90, y=0, z=0),
+                fieldOfView=120
+            )
 
     # Get robot's current position and rotation in format that Thortils use
     def get_agent_pos_and_rotation(self):
