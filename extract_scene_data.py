@@ -12,25 +12,63 @@ import prior
 
 from llm_room_classifier import LLMRoomClassifier # LLM room classifier
 from room_classifier import RoomClassifier # SVC room classifier
+from cvm_room_classifier import CVMRoomClassifier # CVM room classifier
 from ModelType import ModelType
 from room_type import RoomType
 from ae_llm import LLMType
+from ae_cvm import CVMType
 from scene_description import SceneDescription
 import pickle
 import glob
 
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
+from enum import Enum
+
+class ClassificationMethod(Enum):
+    SVC = 1
+    LLM = 2
+    CVM = 3
+    SVC_LLM = 4
+    SVC_CVM = 5
+    SVC_CVM_LLM = 6
+
+    #@classmethod
+    def svc_required(self):
+        if self == ClassificationMethod.SVC or self == ClassificationMethod.SVC_LLM or self == ClassificationMethod.SVC_CVM  or self == ClassificationMethod.SVC_CVM_LLM:
+            return True
+        else:
+            return False
+
+    #@classmethod
+    def llm_required(self):
+        if self == ClassificationMethod.LLM or self == ClassificationMethod.SVC_LLM or self == ClassificationMethod.SVC_CVM_LLM:
+            return True
+        else:
+            return False
+
+    #@classmethod
+    def cvm_required(self):
+        if self == ClassificationMethod.CVM or self == ClassificationMethod.SVC_CVM  or self == ClassificationMethod.SVC_CVM_LLM:
+            return True
+        else:
+            return False
 
 class DataSceneExtractor:
-    def __init__(self, llm_type):
+    def __init__(self, llm_type, cvm_type, classification_method_in):
         self.dataset = None
         # If our point only has these common objects visible, then there's little point
         # to classify, because these are common.
         self.common_objs = {'Wall', 'Doorway', 'Window', 'Floor', 'Doorframe'}
 
-        self.lrc = LLMRoomClassifier(llm_type) # LLM classifier
-        self.src = RoomClassifier(False, ModelType.HYBRID_AI2_THOR) # SVC classifier
+        self.classification_method = classification_method_in
+
+        if (self.classification_method.llm_required()):
+            self.lrc = LLMRoomClassifier(llm_type) # LLM classifier
+        if (self.classification_method.svc_required()):
+            self.src = RoomClassifier(False, ModelType.HYBRID_AI2_THOR) # SVC classifier
+        if (self.classification_method.cvm_required()):
+            self.crc = CVMRoomClassifier(cvm_type)
         self.NUMBER_OF_SCENES_IN_BATCH = 7
 
         self.LLM_TYPE = llm_type.name
@@ -194,6 +232,8 @@ class DataSceneExtractor:
         for pos, objs in observed_pos.items():
             print(pos)
             objs_at_this_pos = set()
+            img_url = observed_front_views[pos]
+            print("Front view: " + img_url)
             for obj in self.get_visible_objects_from_collection(objs):
                 objs_at_this_pos.add(obj['objectType'])
 
@@ -208,28 +248,46 @@ class DataSceneExtractor:
                 print("Only common objects -- skipping")
                 continue
 
-            t0 = time()
-            rt_llm = self.lrc.classify_room_by_this_object_set(objs_at_this_pos)
-            llm_elapsed_time = round(time() - t0, 5)
-            #print("llm predict time:", llm_elapsed_time, "s")
+            # initialise result variables
+            rt_llm = RoomType.NOT_KNOWN
+            rt_svc = RoomType.NOT_KNOWN
+            rt_cvm = RoomType.NOT_KNOWN
+            svc_elapsed_time = 0
+            llm_elapsed_time = 0
+            cvm_elapsed_time = 0
 
-            t0 = time()
-            rt_svc = self.src.classify_room_by_this_object_set(objs_at_this_pos)
-            svc_elapsed_time = round(time() - t0, 5)
-            #print("svc predict time:", svc_elapsed_time, "s")
+            # classify using the appropriate methods
+            if (self.classification_method.llm_required()):
+                t0 = time()
+                rt_llm = self.lrc.classify_room_by_this_object_set(objs_at_this_pos)
+                llm_elapsed_time = round(time() - t0, 5)
+                #print("llm predict time:", llm_elapsed_time, "s")
+
+            if (self.classification_method.svc_required()):
+                t0 = time()
+                rt_svc = self.src.classify_room_by_this_object_set(objs_at_this_pos)
+                svc_elapsed_time = round(time() - t0, 5)
+                #print("svc predict time:", svc_elapsed_time, "s")
+
+            if (self.classification_method.cvm_required()):
+                t0 = time()
+                rt_cvm = self.crc.classify_room_by_this_image(img_url)
+                cvm_elapsed_time = round(time() - t0, 5)
+                #print("svc predict time:", svc_elapsed_time, "s")
 
             rt_gt = self.what_room_is_point_in_ground_truth(rooms, pos[0])
 
-            sd.addPoint(pos, rt_llm, rt_svc, rt_gt, objs, llm_elapsed_time, svc_elapsed_time)
+            sd.addPoint(pos, rt_llm, rt_svc, rt_cvm, rt_gt, objs, img_url, lm_elapsed_time, svc_elapsed_time, cvm_elapsed_time)
 
             time_records.append({
                 "Position": pos,
                 "LLM Time (s)": llm_elapsed_time,
-                "SVC Time (s)": svc_elapsed_time
+                "SVC Time (s)": svc_elapsed_time,
+                "CVM Time (s)": cvm_elapsed_time
             })
 
             print(objs_at_this_pos)
-            print(rt_svc.name + " ## " + rt_llm.name + " ## " + rt_gt.name)
+            print(rt_svc.name + " ## " + rt_llm.name + " ## " + rt_cvm.name + " ## " + rt_gt.name)
 
             # For debug only - this would limit the explored points per room to only 3
             if self.DEBUG:
@@ -266,5 +324,5 @@ class DataSceneExtractor:
         return sd # return scene description - classified with LLM and with SVC
 
 if __name__ == "__main__":
-    dse = DataSceneExtractor(LLMType.LLAMA)
+    dse = DataSceneExtractor(LLMType.LLAMA, CVMType.MOONDREAM, ClassificationMethod.SVC_CVM)
     dse.process_1_batch_of_data_scenes()

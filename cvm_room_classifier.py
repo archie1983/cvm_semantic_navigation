@@ -20,16 +20,16 @@ class CVMRoomClassifier:
 
     self.stored_labels_loaded = False
 
-    self.glc = CVMControl(LLMType.MOONDREAM)
+    self.glc = CVMControl(CVMType.MOONDREAM)
 
-  def __init__(self, llm_type):
+  def __init__(self, cvm_type):
     self.data_counter = 0
     self.false_cnt = 0
     self.true_cnt = 0
 
     self.stored_labels_loaded = False
 
-    self.glc = CVMControl(llm_type)
+    self.glc = CVMControl(cvm_type)
 
     self.piclist = []
 
