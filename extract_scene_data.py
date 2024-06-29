@@ -165,7 +165,7 @@ class DataSceneExtractor:
         house = dataset[data_set][scene_num]
         rooms = self.get_rooms_ground_truth(house)
 
-        print("ROOOMS:" + str(rooms))
+        print("ROOMS:" + str(rooms))
 
         # If we don't have all 4 rooms types- kitchen, bedroom, living room and bathroom,
         # then skip.
@@ -179,9 +179,10 @@ class DataSceneExtractor:
         #grid_map = convert_scene_to_grid_map(controller, floor_plan, 0.25)
 
         keywords = {'num_stops': 100, 'num_rotates': 8, 'sep': 1.25, 'downsample': True, 'v_angles': [30]}
-        (grid_map, observed_pos) = proper_convert_scene_to_grid_map_and_poses(controller,
+        (grid_map, observed_pos, observed_front_views) = proper_convert_scene_to_grid_map_and_poses(controller,
                                      floor_cut=0.1,
                                      ceiling_cut=1.0,
+                                     scene_id=scene_id,
                                      **keywords)
 
         # scene description, which will contain points of its floorplan
