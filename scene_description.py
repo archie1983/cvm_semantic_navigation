@@ -43,11 +43,11 @@ class SceneDescription:
         "room_type_cvm" : room_type_cvm,
         "room_type_gt" : room_type_gt,
         "visible_objects_at_this_point" : visible_objects_at_this_point,
-        "visible_objects_at_this_point" : front_view_at_this_point,
+        "front_view_at_this_point" : front_view_at_this_point,
         "visible_object_names" : set(),
         "elapsed_time_llm": elapsed_time_llm,
         "elapsed_time_svc": elapsed_time_svc,
-        "elapsed_time_svc": elapsed_time_cvm
+        "elapsed_time_cvm": elapsed_time_cvm
     }
 
     # store names of the objects visible from this point

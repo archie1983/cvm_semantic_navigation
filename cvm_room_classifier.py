@@ -52,8 +52,8 @@ class CVMRoomClassifier:
   ##
   def classify_room_by_this_image(self, img_url):
       self.glc.initialise_for_ai2_thor_room_classification()
-      print("Analyzing: " + img_url)
-      ans = self.glc.classify_room(self.piclist[i])
+      #print("Analyzing: " + img_url)
+      ans = self.glc.classify_room(img_url)
 
       return ans
 

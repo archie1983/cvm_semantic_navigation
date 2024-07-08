@@ -208,7 +208,7 @@ class DataSceneExtractor:
         # If we don't have all 4 rooms types- kitchen, bedroom, living room and bathroom,
         # then skip.
         # for debug only - when we want quick classification of a small room, the flag self.DEBUG must be true.
-        if (not self.DEBUG and self.is_full_house(rooms)) or (self.DEBUG and not self.is_full_house(rooms)):
+        if (not self.DEBUG and not self.is_full_house(rooms)) or (self.DEBUG and self.is_full_house(rooms)):
             print("skipping house because it's not full ----------------------- ")
             return False
 
@@ -227,13 +227,15 @@ class DataSceneExtractor:
         # that were traversed using the proper_convert_scene_to_grid_map_and_poses
         # method.
         sd = SceneDescription() # scene description classified with LLM and SVC
+        #print("observed_front_views ::::::::::::::::::::::::::::::")
+        #print(observed_front_views)
 
         i = 0
         for pos, objs in observed_pos.items():
             print(pos)
             objs_at_this_pos = set()
             img_url = observed_front_views[pos]
-            print("Front view: " + img_url)
+            #print("Front view: " + img_url)
             for obj in self.get_visible_objects_from_collection(objs):
                 objs_at_this_pos.add(obj['objectType'])
 
@@ -277,7 +279,7 @@ class DataSceneExtractor:
 
             rt_gt = self.what_room_is_point_in_ground_truth(rooms, pos[0])
 
-            sd.addPoint(pos, rt_llm, rt_svc, rt_cvm, rt_gt, objs, img_url, lm_elapsed_time, svc_elapsed_time, cvm_elapsed_time)
+            sd.addPoint(pos, rt_llm, rt_svc, rt_cvm, rt_gt, objs, img_url, llm_elapsed_time, svc_elapsed_time, cvm_elapsed_time)
 
             time_records.append({
                 "Position": pos,

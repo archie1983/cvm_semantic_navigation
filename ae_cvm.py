@@ -51,7 +51,7 @@ class CVMControl:
         image = Image.open(image_url)
         enc_image = self.model.encode_image(image)
         full_answer = self.model.answer_question(enc_image, self.question, self.tokenizer)
-        print("Full answer: " + full_answer)
+        print("CVM answer: " + full_answer)
 
         print("cvm predict time:", round(time()-t0, 3), "s")
 
