@@ -1,4 +1,3 @@
-import os
 from time import time
 import pandas as pd
 from thortils import (launch_controller,
@@ -8,7 +7,7 @@ from thortils.utils.visual import GridMapVisualizer
 from thortils.agent import thor_reachable_positions
 from thortils.grid_map import GridMap
 
-import prior
+import prior, pickle, glob, os
 
 from llm_room_classifier import LLMRoomClassifier # LLM room classifier
 from room_classifier import RoomClassifier # SVC room classifier
@@ -18,48 +17,23 @@ from room_type import RoomType
 from ae_llm import LLMType
 from ae_cvm import CVMType
 from scene_description import SceneDescription
-import pickle
-import glob
 
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
-from enum import Enum
-
-class ClassificationMethod(Enum):
-    SVC = 1
-    LLM = 2
-    CVM = 3
-    SVC_LLM = 4
-    SVC_CVM = 5
-    SVC_CVM_LLM = 6
-
-    #@classmethod
-    def svc_required(self):
-        if self == ClassificationMethod.SVC or self == ClassificationMethod.SVC_LLM or self == ClassificationMethod.SVC_CVM  or self == ClassificationMethod.SVC_CVM_LLM:
-            return True
-        else:
-            return False
-
-    #@classmethod
-    def llm_required(self):
-        if self == ClassificationMethod.LLM or self == ClassificationMethod.SVC_LLM or self == ClassificationMethod.SVC_CVM_LLM:
-            return True
-        else:
-            return False
-
-    #@classmethod
-    def cvm_required(self):
-        if self == ClassificationMethod.CVM or self == ClassificationMethod.SVC_CVM  or self == ClassificationMethod.SVC_CVM_LLM:
-            return True
-        else:
-            return False
+from scene_data_management import ClassificationMethod, SceneManagement
+from ai2_thor_utils import AI2THORUtils
 
 class DataSceneExtractor:
-    def __init__(self, llm_type, cvm_type, classification_method_in):
+    ##
+    # We can override default data storage directory (normally- the name of LLM within experiment_data folder)
+    ##
+    def __init__(self, llm_type, cvm_type, classification_method_in, data_store_dir = ""):
         self.dataset = None
         # If our point only has these common objects visible, then there's little point
         # to classify, because these are common.
         self.common_objs = {'Wall', 'Doorway', 'Window', 'Floor', 'Doorframe'}
+
+        self.atu = AI2THORUtils()
 
         self.classification_method = classification_method_in
 
@@ -73,13 +47,18 @@ class DataSceneExtractor:
 
         self.LLM_TYPE = llm_type.name
 
-        self.data_store_dir = "experiment_data"
+        if (data_store_dir == ""):
+            self.data_store_dir = "experiment_data/" + "pkl_" + self.LLM_TYPE
+        else:
+            self.data_store_dir = "experiment_data/" + data_store_dir
+
+        self.scene_mgmt = SceneManagement(self.data_store_dir)
 
         self.DEBUG = False # A flag of whether we want to debug and go through a room very quickly - only small rooms and only 3 points in each to classify.
 
         # Create the directory where to store experiment data if it doesn't exist
-        if not os.path.exists(self.data_store_dir + "/pkl_" + self.LLM_TYPE):
-            os.makedirs(self.data_store_dir + "/pkl_" + self.LLM_TYPE)
+        if not os.path.exists(self.data_store_dir):
+            os.makedirs(self.data_store_dir)
 
     ##
     # Ground truth functions - data extracted from the actual room and point is
@@ -116,17 +95,6 @@ class DataSceneExtractor:
 
         return rooms
 
-    def get_visible_objects_from_collection(self, objects, print_objects = False):
-        visible_objects = []
-
-        for obj in objects:
-            if obj['visible']:
-                if print_objects:
-                    print(obj['objectType'] + " : " + str(obj['position']))
-                visible_objects.append(obj)
-
-        return visible_objects
-
     def is_full_house(self, rooms):
         existing_room_names = set()
         for room in rooms:
@@ -136,25 +104,6 @@ class DataSceneExtractor:
             existing_room_names.add(rl)
 
         return set(RoomType.all_labels()) == existing_room_names
-
-    ##
-    # Returns the highest index of scenes explored
-    ##
-    def last_index_extracted(self):
-        pkl_files_glob = self.data_store_dir + "/pkl_" + self.LLM_TYPE + "/scene_descr_train_*.pkl"
-
-        scene_files = glob.glob(pkl_files_glob) # scene files
-
-        highest_index = 0
-        cur_index = 0
-
-        for file_name in scene_files:
-            els = file_name.split("_")
-            cur_index = int(els[-1][:-4])
-            if (cur_index > highest_index):
-                highest_index = cur_index
-
-        return highest_index
 
     def getDataSet(self):
         if (self.dataset is None):
@@ -169,7 +118,7 @@ class DataSceneExtractor:
         # method
         # If pickle file for our scene description exists, then move on to the next
         # scene, otherwise explore this one
-        highest_scene_index = self.last_index_extracted()
+        highest_scene_index = self.scene_mgmt.last_index_extracted()
         print("Highest index explored: " + str(highest_scene_index))
         processed_scenes_in_this_batch = 0
 
@@ -232,40 +181,41 @@ class DataSceneExtractor:
 
         i = 0
         for pos, objs in observed_pos.items():
-            print(pos)
-            objs_at_this_pos = set()
+            #print(pos)
+            objs_at_this_pos = self.atu.get_visible_object_names_from_collection_set(objs)
             img_url = observed_front_views[pos]
-            #print("Front view: " + img_url)
-            for obj in self.get_visible_objects_from_collection(objs):
-                objs_at_this_pos.add(obj['objectType'])
+
+            # at first assume that we can use object list to classify
+            classify_using_object_list = True
 
             # No point to classify this point if there are no objects
+            # We may not want to classify it using SVC or LLM, but a visual
+            # CVM might still be able to classify it.
             if (len(objs_at_this_pos) < 1):
                 print("Empty set of objects -- skipping")
-                continue
-
-            #print(objs_at_this_pos)
-
+                classify_using_object_list = False
+            # Similarly with common objects only- SVC and LLM can't help here,
+            # but CVM might be able to, so continue, just don't use LLM or SVC.
             if (objs_at_this_pos.issubset(self.common_objs)):
                 print("Only common objects -- skipping")
-                continue
+                classify_using_object_list = False
 
             # initialise result variables
-            rt_llm = RoomType.NOT_KNOWN
-            rt_svc = RoomType.NOT_KNOWN
-            rt_cvm = RoomType.NOT_KNOWN
+            rt_llm = RoomType.NOT_CLASSIFIED
+            rt_svc = RoomType.NOT_CLASSIFIED
+            rt_cvm = RoomType.NOT_CLASSIFIED
             svc_elapsed_time = 0
             llm_elapsed_time = 0
             cvm_elapsed_time = 0
 
             # classify using the appropriate methods
-            if (self.classification_method.llm_required()):
+            if (self.classification_method.llm_required() and classify_using_object_list):
                 t0 = time()
                 rt_llm = self.lrc.classify_room_by_this_object_set(objs_at_this_pos)
                 llm_elapsed_time = round(time() - t0, 5)
                 #print("llm predict time:", llm_elapsed_time, "s")
 
-            if (self.classification_method.svc_required()):
+            if (self.classification_method.svc_required() and classify_using_object_list):
                 t0 = time()
                 rt_svc = self.src.classify_room_by_this_object_set(objs_at_this_pos)
                 svc_elapsed_time = round(time() - t0, 5)
@@ -301,10 +251,10 @@ class DataSceneExtractor:
 
         # Data processing and saving as Excel
         df = pd.DataFrame(time_records)
-        df.to_excel(self.data_store_dir + "/pkl_" + self.LLM_TYPE + f"/timing_data_{scene_id}.xlsx", index=False)
+        df.to_excel(self.data_store_dir + f"/timing_data_{scene_id}.xlsx", index=False)
 
         # store our room points collection into a pickle file
-        scene_descr_fname = self.data_store_dir + "/pkl_" + self.LLM_TYPE + "/scene_descr_" + scene_id + ".pkl"
+        scene_descr_fname = self.data_store_dir + "/scene_descr_" + scene_id + ".pkl"
         pickle.dump(sd, open(scene_descr_fname, "wb"))
 
         #print(len(observed_pos))
@@ -326,5 +276,6 @@ class DataSceneExtractor:
         return sd # return scene description - classified with LLM and with SVC
 
 if __name__ == "__main__":
-    dse = DataSceneExtractor(LLMType.LLAMA, CVMType.MOONDREAM, ClassificationMethod.SVC_CVM)
+    #dse = DataSceneExtractor(LLMType.LLAMA, CVMType.MOONDREAM, ClassificationMethod.SVC_CVM)
+    dse = DataSceneExtractor(LLMType.LLAMA, CVMType.MOONDREAM, ClassificationMethod.SVC, "data_collection")
     dse.process_1_batch_of_data_scenes()

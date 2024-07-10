@@ -9,6 +9,7 @@ class RoomType(Enum):
     BEDROOM = 3
     BATHROOM = 4
     NOT_KNOWN = 5
+    NOT_CLASSIFIED = 6
 
     @classmethod
     def parse_llm_response(self, text):

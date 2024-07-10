@@ -89,7 +89,7 @@ class LLMRoomClassifier:
       objs_to_look_near = ""
       for obj in where_to_look:
           objs_to_look_near += obj + ", "
-      
+
       objs_to_look_near = objs_to_look_near[:-2]
 
       self.glc.construct_object_selector_question(what_to_look_for, objs_to_look_near)

@@ -58,6 +58,15 @@ class CVMRoomClassifier:
       return ans
 
   ##
+  # Extract visible items from a given image
+  ##
+  def extract_items_from_this_image(self, img_url):
+      #print("Analyzing: " + img_url)
+      ans = self.glc.extract_visible_items(img_url)
+
+      return ans
+
+  ##
   # Allows us asking the LLM where to find a given object
   ##
   def where_to_find_this(self, object_name):

@@ -15,21 +15,33 @@ class CVMType(Enum):
 class CVMControl:
     def __init__(self, cvm_type):
         self.cvm_type = cvm_type
-        self.get_tokenizer()
+        self.tokenizer = None
 
     ##
     # Start HuggingFace pipeline and get tokenizer for the CVM
     ##
     def get_tokenizer(self):
-        model_id = self.cvm_type.model_meta()[0]
-        revision = self.cvm_type.model_meta()[1]
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model_id, trust_remote_code=True, revision=revision
-        )
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id, revision=revision)
+        if (self.tokenizer is None):
+            model_id = self.cvm_type.model_meta()[0]
+            revision = self.cvm_type.model_meta()[1]
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_id, trust_remote_code=True, revision=revision
+            )
+            self.tokenizer = AutoTokenizer.from_pretrained(model_id, revision=revision)
 
+    ##
+    # Prepare for a room classification question.
+    ##
     def initialise_for_ai2_thor_room_classification(self):
         self.question = "What kind of room is this? Please choose from: kitchen, office, bedroom, bathroom, living room"
+
+        return self.question
+
+    ##
+    # Prepare for a question about the items in the room.
+    ##
+    def initialise_for_item_extraction(self):
+        self.question = "Please give me a comma separated list of items that are in this picture!"
 
         return self.question
 
@@ -46,14 +58,34 @@ class CVMControl:
 
         return self.question
 
+    ##
+    # Extract items visible in a given picture
+    ##
+    def extract_visible_items(self, image_url):
+        self.get_tokenizer()
+        self.initialise_for_item_extraction()
+
+        image = Image.open(image_url)
+        enc_image = self.model.encode_image(image)
+        full_answer = self.model.answer_question(enc_image, self.question, self.tokenizer)
+        #print("CVM answer: " + full_answer)
+
+        return full_answer
+
+    ##
+    # Classify a room by a given picture
+    ##
     def classify_room(self, image_url):
-        t0 = time()
+        self.get_tokenizer()
+        self.initialise_for_ai2_thor_room_classification()
+
+        #t0 = time()
         image = Image.open(image_url)
         enc_image = self.model.encode_image(image)
         full_answer = self.model.answer_question(enc_image, self.question, self.tokenizer)
         print("CVM answer: " + full_answer)
 
-        print("cvm predict time:", round(time()-t0, 3), "s")
+        #print("cvm predict time:", round(time()-t0, 3), "s")
 
         ret_answer = RoomType.parse_llm_response(full_answer)
 
