@@ -3,90 +3,55 @@ from room_type import RoomType
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from PIL import Image
 from time import time
+from moondream import MoonDreamInference
+from chameleon import ChameleonInference
 
 class CVMType(Enum):
-    MOONDREAM = 1
-
-    #@classmethod
-    def model_meta(self):
-        if self == CVMType.MOONDREAM:
-            return ("vikhyatk/moondream2", "2024-05-20")
+    MOONDREAM = 1 # Moondream
+    CHAMELEON = 2 # Meta Chameleon
 
 class CVMControl:
     def __init__(self, cvm_type):
         self.cvm_type = cvm_type
-        self.tokenizer = None
-
-    ##
-    # Start HuggingFace pipeline and get tokenizer for the CVM
-    ##
-    def get_tokenizer(self):
-        if (self.tokenizer is None):
-            model_id = self.cvm_type.model_meta()[0]
-            revision = self.cvm_type.model_meta()[1]
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_id, trust_remote_code=True, revision=revision
-            )
-            self.tokenizer = AutoTokenizer.from_pretrained(model_id, revision=revision)
+        self.cvm = None
+        if self.cvm_type == CVMType.MOONDREAM:
+            self.cvm = MoonDreamInference()
+        elif self.cvm_type == CVMType.CHAMELEON:
+            self.cvm = ChameleonInference()
 
     ##
     # Prepare for a room classification question.
     ##
     def initialise_for_ai2_thor_room_classification(self):
-        self.question = "What kind of room is this? Please choose from: kitchen, office, bedroom, bathroom, living room"
-
-        return self.question
+        return self.cvm.initialise_for_ai2_thor_room_classification()
 
     ##
     # Prepare for a question about the items in the room.
     ##
     def initialise_for_item_extraction(self):
-        self.question = "Please give me a comma separated list of items that are in this picture!"
-
-        return self.question
+        return self.cvm.initialise_for_item_extraction()
 
     ##
     # Constructs a question of whether this room is good to look for the given object
     ##
     def construct_room_qualification_question(self, what_to_look_for, where_to_look):
-        template = """
-        Is this room a good candidate to look for
-        {0}
-        """
-
-        self.question = template.format(what_to_look_for)
-
-        return self.question
+        return self.cvm.construct_room_qualification_question(what_to_look_for, where_to_look)
 
     ##
     # Extract items visible in a given picture
     ##
     def extract_visible_items(self, image_url):
-        self.get_tokenizer()
-        self.initialise_for_item_extraction()
-
-        image = Image.open(image_url)
-        enc_image = self.model.encode_image(image)
-        full_answer = self.model.answer_question(enc_image, self.question, self.tokenizer)
-        #print("CVM answer: " + full_answer)
-
-        return full_answer
+        return self.cvm.extract_visible_items(image_url)
 
     ##
     # Classify a room by a given picture
     ##
     def classify_room(self, image_url):
-        self.get_tokenizer()
-        self.initialise_for_ai2_thor_room_classification()
+        (full_answer, time_taken) = self.cvm.classify_room(image_url)
+        #print("CVM answer: " + full_answer)
 
-        #t0 = time()
-        image = Image.open(image_url)
-        enc_image = self.model.encode_image(image)
-        full_answer = self.model.answer_question(enc_image, self.question, self.tokenizer)
-        print("CVM answer: " + full_answer)
-
-        #print("cvm predict time:", round(time()-t0, 3), "s")
+        print("cvm predict time:", round(time_taken, 3), "s")
 
         ret_answer = RoomType.parse_llm_response(full_answer)
 
-        return ret_answer
+        return (ret_answer, time_taken)

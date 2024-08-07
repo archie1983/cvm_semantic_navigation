@@ -20,7 +20,7 @@ class CVMRoomClassifier:
 
     self.stored_labels_loaded = False
 
-    self.glc = CVMControl(CVMType.MOONDREAM)
+    self.glc = CVMControl(CVMType.CHAMELEON)
 
   def __init__(self, cvm_type):
     self.data_counter = 0
@@ -53,9 +53,9 @@ class CVMRoomClassifier:
   def classify_room_by_this_image(self, img_url):
       self.glc.initialise_for_ai2_thor_room_classification()
       #print("Analyzing: " + img_url)
-      ans = self.glc.classify_room(img_url)
+      (ans, time_taken) = self.glc.classify_room(img_url)
 
-      return ans
+      return (ans, time_taken)
 
   ##
   # Extract visible items from a given image
@@ -110,5 +110,5 @@ class CVMRoomClassifier:
       print("TRUE CNT: " + str(self.true_cnt) + " :: False CNT: " + str(self.false_cnt))
 
 if __name__ == "__main__":
-    rc = CVMRoomClassifier(CVMType.MOONDREAM)
+    rc = CVMRoomClassifier(CVMType.CHAMELEON)
     rc.test_classification_on_stored_data()
