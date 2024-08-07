@@ -5,7 +5,7 @@ from llm_room_classifier import LLMRoomClassifier # LLM room classifier
 from room_classifier import RoomClassifier # SVC room classifier
 from cvm_room_classifier import CVMRoomClassifier # CVM room classifier
 from ModelType import ModelType
-import pickle
+import pickle, os
 from ai2_thor_utils import AI2THORUtils
 from scene_description import SceneDescription
 
@@ -63,6 +63,10 @@ class DataSceneProcessor:
 
     def store_scene_file_cvm(self, scene_id, sd):
         # store our room points collection into a pickle file
+        # Create the directory where to store experiment data if it doesn't exist
+        if not os.path.exists(self.data_store_dir_cvm):
+            os.makedirs(self.data_store_dir_cvm)
+
         scene_descr_fname = self.data_store_dir_cvm + "/scene_descr_" + str(scene_id) + ".pkl"
         pickle.dump(sd, open(scene_descr_fname, "wb"))
 
@@ -134,7 +138,7 @@ class DataSceneProcessor:
                                     point["elapsed_time_svc"],
                                     cvm_time_taken)
 
-            if self.DEBUG and points_cnt >= 5:
+            if self.DEBUG and points_cnt >= 3:
                 break
 
         self.store_scene_file_cvm(scene_id, new_sd_with_cvm)

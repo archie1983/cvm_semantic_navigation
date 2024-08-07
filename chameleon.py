@@ -10,12 +10,14 @@ class ChameleonInference():
         self.processor = None
         self.model = None
         self.question = None
+        self.load_model()
 
     def load_model(self):
-        self.model = ChameleonForConditionalGeneration.from_pretrained("facebook/chameleon-7b", torch_dtype=torch.bfloat16, device_map="cuda:0")
-        #model = ChameleonForConditionalGeneration.from_pretrained("facebook/chameleon-7b", torch_dtype=torch.float16, device_map="cuda:0")
-        #model = ChameleonForConditionalGeneration.from_pretrained("facebook/chameleon-7b", torch_dtype=torch.bfloat16)
-        self.processor = ChameleonProcessor.from_pretrained("facebook/chameleon-7b")
+        if (self.model == None or self.processor == None):
+            self.model = ChameleonForConditionalGeneration.from_pretrained("facebook/chameleon-7b", torch_dtype=torch.bfloat16, device_map="cuda:0")
+            #model = ChameleonForConditionalGeneration.from_pretrained("facebook/chameleon-7b", torch_dtype=torch.float16, device_map="cuda:0")
+            #model = ChameleonForConditionalGeneration.from_pretrained("facebook/chameleon-7b", torch_dtype=torch.bfloat16)
+            self.processor = ChameleonProcessor.from_pretrained("facebook/chameleon-7b")
 
     ##
     # Prepare for a room classification question.
@@ -41,6 +43,7 @@ class ChameleonInference():
         start_time = time.time()
 
         image = Image.open(image_url)
+        #print(str(self.processor == None))
         inputs = self.processor(self.question, images=image, return_tensors="pt").to(self.model.device, torch.bfloat16)
 
         generated_ids = self.model.generate(**inputs, max_new_tokens=100)
