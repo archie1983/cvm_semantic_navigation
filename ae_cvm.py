@@ -47,6 +47,7 @@ class CVMControl:
     # Classify a room by a given picture
     ##
     def classify_room(self, image_url):
+        self.initialise_for_ai2_thor_room_classification()
         (full_answer, time_taken) = self.cvm.classify_room(image_url)
         #print("CVM answer: " + full_answer)
 
