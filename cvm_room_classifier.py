@@ -55,7 +55,7 @@ class CVMRoomClassifier:
       #print("Analyzing: " + img_url)
       (ans, time_taken, cvm_text) = self.glc.classify_room(img_url)
 
-      return (ans, time_taken)
+      return (ans, time_taken, cvm_text)
 
   ##
   # Extract visible items from a given image
