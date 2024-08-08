@@ -117,7 +117,7 @@ class DataSceneProcessor:
 
             # Now let's try to analyze the pictures with a CVM and see what we would classify them as and
             # what items do we see in each of them.
-            (rt_cvm, cvm_time_taken) = self.crc.classify_room_by_this_image(img_url)
+            (rt_cvm, cvm_time_taken, cvm_text) = self.crc.classify_room_by_this_image(img_url)
             print("Room Type CVM: " + rt_cvm.name)
 
             ## Let's not do items in the picture inference yet- I'm not yet sure how to parse the item list.
@@ -136,7 +136,9 @@ class DataSceneProcessor:
                                     point["front_view_at_this_point"],
                                     point["elapsed_time_llm"],
                                     point["elapsed_time_svc"],
-                                    cvm_time_taken)
+                                    cvm_time_taken,
+                                    "",
+                                    cvm_text)
 
             if self.DEBUG and points_cnt >= 3:
                 break

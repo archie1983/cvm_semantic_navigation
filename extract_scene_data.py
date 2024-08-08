@@ -229,7 +229,7 @@ class DataSceneExtractor:
 
             rt_gt = self.what_room_is_point_in_ground_truth(rooms, pos[0])
 
-            sd.addPoint(pos, rt_llm, rt_svc, rt_cvm, rt_gt, objs, None, img_url, llm_elapsed_time, svc_elapsed_time, cvm_elapsed_time)
+            sd.addPoint(pos, rt_llm, rt_svc, rt_cvm, rt_gt, objs, None, img_url, llm_elapsed_time, svc_elapsed_time, cvm_elapsed_time, "", "")
 
             time_records.append({
                 "Position": pos,

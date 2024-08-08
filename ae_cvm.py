@@ -55,4 +55,4 @@ class CVMControl:
 
         ret_answer = RoomType.parse_llm_response(full_answer)
 
-        return (ret_answer, time_taken)
+        return (ret_answer, time_taken, full_answer)

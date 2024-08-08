@@ -30,7 +30,7 @@ class SceneDescription:
   # elapsed_time_llm - LLM inference time to classify this point
   # elapsed_time_svc - SVC inference time to classify this point
   ##
-  def addPoint(self, point_pose, room_type_llm, room_type_svc, room_type_cvm, room_type_gt, visible_objects_at_this_point, visible_objects_by_cvm, front_view_at_this_point, elapsed_time_llm, elapsed_time_svc, elapsed_time_cvm):
+  def addPoint(self, point_pose, room_type_llm, room_type_svc, room_type_cvm, room_type_gt, visible_objects_at_this_point, visible_objects_by_cvm, front_view_at_this_point, elapsed_time_llm, elapsed_time_svc, elapsed_time_cvm, llm_text, cvm_text):
     # we don't want to store points where no objects are visible.
     # Those are useless as we can't use them for semantic navigation.
     if (len(visible_objects_at_this_point) < 1):
@@ -48,7 +48,9 @@ class SceneDescription:
         "visible_object_names" : set(),
         "elapsed_time_llm": elapsed_time_llm,
         "elapsed_time_svc": elapsed_time_svc,
-        "elapsed_time_cvm": elapsed_time_cvm
+        "elapsed_time_cvm": elapsed_time_cvm,
+        "llm_text": llm_text,
+        "cvm_text": cvm_text
     }
 
     # store names of the objects visible from this point

@@ -10,6 +10,8 @@ class RoomType(Enum):
     BATHROOM = 4
     NOT_KNOWN = 5
     NOT_CLASSIFIED = 6
+    OFFICE = 7
+    STORAGE = 8
 
     @classmethod
     def parse_llm_response(self, text):
@@ -31,6 +33,12 @@ class RoomType(Enum):
         if "BATHROOM" in text.upper() and nearest_index > text.upper().find("BATHROOM"):
             ret_val = RoomType.BATHROOM
             nearest_index = text.upper().find("BATHROOM")
+        if "OFFICE" in text.upper() and nearest_index > text.upper().find("OFFICE"):
+            ret_val = RoomType.OFFICE
+            nearest_index = text.upper().find("OFFICE")
+        if "STORAGE" in text.upper() and nearest_index > text.upper().find("STORAGE"):
+            ret_val = RoomType.STORAGE
+            nearest_index = text.upper().find("STORAGE")
 
         return ret_val
 
@@ -47,9 +55,13 @@ class RoomType(Enum):
             ret_val = RoomType.BEDROOM
         if "BATHROOM" in text.upper():
             ret_val = RoomType.BATHROOM
+        if "OFFICE" in text.upper():
+            ret_val = RoomType.OFFICE
+        if "STORAGE" in text.upper():
+            ret_val = RoomType.STORAGE
 
         return ret_val
 
     @classmethod
     def all_labels(self):
-        return ["LIVING ROOM", "KITCHEN", "BEDROOM", "BATHROOM"]
+        return ["LIVING ROOM", "KITCHEN", "BEDROOM", "BATHROOM", "OFFICE", "STORAGE"]

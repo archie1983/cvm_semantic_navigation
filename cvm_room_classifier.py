@@ -53,7 +53,7 @@ class CVMRoomClassifier:
   def classify_room_by_this_image(self, img_url):
       self.glc.initialise_for_ai2_thor_room_classification()
       #print("Analyzing: " + img_url)
-      (ans, time_taken) = self.glc.classify_room(img_url)
+      (ans, time_taken, cvm_text) = self.glc.classify_room(img_url)
 
       return (ans, time_taken)
 
