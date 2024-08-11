@@ -22,7 +22,7 @@ class DataSceneProcessor:
             self.src = RoomClassifier(False, ModelType.HYBRID_AI2_THOR) # SVC classifier
         if (self.classification_method.cvm_required()):
             self.crc = CVMRoomClassifier(cvm_type)
-        self.NUMBER_OF_SCENES_IN_BATCH = 1
+        self.NUMBER_OF_SCENES_IN_BATCH = 25
 
         self.LLM_TYPE = llm_type.name
         self.CVM_TYPE = cvm_type.name
@@ -41,7 +41,7 @@ class DataSceneProcessor:
 
         self.scene_mgmt = SceneManagement(self.data_store_dir)
 
-        self.DEBUG = True # A flag of whether we want to debug and go through scenes quickly - only analyzing some points.
+        self.DEBUG = False # A flag of whether we want to debug and go through scenes quickly - only analyzing some points.
 
     ##
     # Loads a single specified scene file from the data directory
@@ -147,5 +147,5 @@ class DataSceneProcessor:
 
 if __name__ == "__main__":
     #dse = DataSceneExtractor(LLMType.LLAMA, CVMType.MOONDREAM, ClassificationMethod.SVC_CVM)
-    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.SVC_CVM, "data_collection")
+    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.MOONDREAM, ClassificationMethod.SVC_CVM, "data_collection")
     dsp.process_1_batch_of_data_scenes()
