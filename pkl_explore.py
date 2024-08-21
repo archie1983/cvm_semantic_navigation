@@ -5,6 +5,7 @@ from scene_description import SceneDescription
 def process_scene_files():
     #pkl_store = "pkl_explore/scene_descr_train_*.pkl"
     pkl_store = "experiment_data/pkl_CHAMELEON/*.pkl"
+    #pkl_store = "experiment_data/pkl_MOONDREAM_one_word/*.pkl"
 
     scene_files = glob.glob(pkl_store) # files showing gemma scenes
 
@@ -18,7 +19,7 @@ def process_scene_files():
         print(len(room_points))
         #print(room_points[0])
         for i in range(len(room_points)):
-            #print(room_points[i]['front_view_at_this_point'] + " :: " + room_points[i]['room_type_cvm'].name)
-            print(room_points[i].keys())
+            print(room_points[i]['room_type_svc'].name + " :: " + room_points[i]['room_type_cvm'].name)
+            #print(room_points[i].keys())
 
 process_scene_files()
