@@ -27,7 +27,8 @@ class ChameleonInference():
         #prompt = "What kind of room is in this image?<image>"
         #prompt = "What kind of room is in this image?<image> Please answer with one word only."
         #prompt = "What kind of room is in this image?<image> Please answer with one word only and choose from the following cathegories: living_room, bathroom, office, kitchen, bedroom."
-        self.question = "What kind of room is in this image?<image> Please provide reasoning for your answer and make the first word in your answer the correct label of the room."
+        #self.question = "What kind of room is in this image?<image> Please provide reasoning for your answer and make the first word in your answer the correct label of the room." # prompt 1
+        self.question = "What kind of room is this?<image> Please choose from: kitchen, office, bedroom, bathroom, living room, storage." # prompt 2
 
         return self.question
 
@@ -76,6 +77,7 @@ class ChameleonInference():
 if __name__ == "__main__":
     cvm = ChameleonInference()
     cvm.load_model()
+    cvm.initialise_for_ai2_thor_room_classification()
 
     #cvm.classify_room('scene_pics/train_56/9.png', "OFFICE")
     cvm.classify_room('scene_pics/train_56/12.png', "OFFICE")
