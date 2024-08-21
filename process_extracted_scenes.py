@@ -147,5 +147,6 @@ class DataSceneProcessor:
 
 if __name__ == "__main__":
     #dse = DataSceneExtractor(LLMType.LLAMA, CVMType.MOONDREAM, ClassificationMethod.SVC_CVM)
-    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.MOONDREAM, ClassificationMethod.SVC_CVM, "data_collection")
+    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.SVC_CVM, "data_collection")
+    #dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.MOONDREAM, ClassificationMethod.SVC_CVM, "data_collection")
     dsp.process_1_batch_of_data_scenes()

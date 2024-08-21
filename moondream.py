@@ -1,7 +1,7 @@
 from room_type import RoomType
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from PIL import Image
-from time import time
+import time
 
 class MoonDreamInference():
 
@@ -17,14 +17,16 @@ class MoonDreamInference():
             revision = "2024-05-20"
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_id, trust_remote_code=True, revision=revision
-            )
-            self.tokenizer = AutoTokenizer.from_pretrained(model_id, revision=revision)
+            ).to("cuda")
+            self.tokenizer = AutoTokenizer.from_pretrained(model_id, revision=revision, device_map="auto")
 
     ##
     # Prepare for a room classification question.
     ##
     def initialise_for_ai2_thor_room_classification(self):
-        self.question = "What kind of room is this? Please choose from: kitchen, office, bedroom, bathroom, living room"
+        self.question = "What kind of room is this? Please choose from: kitchen, office, bedroom, bathroom, living room, storage" # prompt 2 - one word
+        #self.question = "What kind of room is in this image? Please provide reasoning for your answer and make the first word in your answer the correct label of the room." # reasoning not provided
+        #self.question = "What kind of room is in this image? Please provide reasoning for your answer." # prompt 1 - reasoning
 
         return self.question
 
