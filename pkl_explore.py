@@ -19,6 +19,6 @@ def process_scene_files():
         #print(room_points[0])
         for i in range(len(room_points)):
             #print(room_points[i]['front_view_at_this_point'] + " :: " + room_points[i]['room_type_cvm'].name)
-            print(room_points[i])
+            print(room_points[i].keys())
 
 process_scene_files()

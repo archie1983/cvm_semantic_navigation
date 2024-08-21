@@ -1,7 +1,7 @@
 from room_type import RoomType
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from PIL import Image
-from time import time
+import time
 
 class MoonDreamInference():
 
