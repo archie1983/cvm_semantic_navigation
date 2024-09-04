@@ -99,23 +99,103 @@ class SemanticMapper:
         top_down_frame = event.third_party_camera_frames[-1]
         return Image.fromarray(top_down_frame)
 
+    def get_controller(self):
+        return self.controller
+
+    ##
+    # Extract all rotations with the given XY position in all room points.
+    # It also extracts the classified result and sorts the extracted rotations.
+    ##
+    def get_all_rotations_of_xy_pose(self, xy_pose, room_points):
+        result = []
+        room_points = self.scene_description.get_all_points()
+        for rp in room_points: # go through all points
+            if rp['point_pose'][0] == xy_pose:
+                result.append((int(rp['point_pose'][1][1]), rp["room_type_llm"])) # and extract yaw rotations along with classification result from the required XY position
+
+        result = self.pad_missing_rotations(result)
+
+        result = sorted(result, key=lambda x: x[0], reverse=True) # sort the result by yaw rotation angle, but we need id reversed because of the way pie plotting works
+        return result
+
+    ##
+    # Some rotations will not be classified because the object list at that pose contained only common objects or was empty.
+    # The classifications will be missing, so let's fill them back in.
+    ##
+    def pad_missing_rotations(self, classified_rotations):
+        padded_classified_rotations = []
+        pad_needed = False
+
+        for i in range(0, 360, 45): # there should be degrees of 0, 45, 90, 135, 180, 225, 270, 315. If there ain't, then we pad
+            pad_needed = True
+            for cr in classified_rotations:
+                if cr[0] == i: # if rotation found, then skip the rest
+                    pad_needed = False
+                    padded_classified_rotations.append(cr)
+                    break
+            if (pad_needed): # if rotation was not found, then we need to inject it
+                padded_classified_rotations.append((i, RoomType.NOT_CLASSIFIED))
+
+        return padded_classified_rotations
+
+    ##
+    # Go through all of the room points and process all rotations for each point
+    # making it ready to plot on the top down frame. This will return
+    # classified_pose_rtns_pairs, which will be used in other functions.
+    ##
+    def prepare_classified_poses_for_processing(self):
+        room_points = self.scene_description.get_all_points()
+        classified_pose_rtns_pairs = []
+        processed_xy_poses = []
+
+        # Go through all of the room points and process all rotations for each point
+        for rp in room_points:
+            (current_xy, current_rot) = rp['point_pose'] # get current XY position
+            if (current_xy in processed_xy_poses): continue
+            #print(rp['point_pose'][0])
+            classified_rotations = self.get_all_rotations_of_xy_pose(current_xy, room_points)
+            #print(classified_rotations) # get all rotations for the given XY position
+            #self.plot_semantic_position(classified_rotations)
+            processed_xy_poses.append(current_xy) # append the XY position to the collection of positions that we don't want to see anymore
+            classified_pose_rtns_pairs.append((current_xy, classified_rotations, rp["room_type_gt"]))
+
+        return classified_pose_rtns_pairs
+
+    ##
+    # Create the pie plot of a semantic position with all the segments coloured
+    # according to the classifictation.
+    ##
+    def plot_semantic_position(self, position, sorted_classified_rotations, ax):
+        segment_size = 100.0/8.0 # we have 8 directions of view and 100% to cover
+        colors = []
+
+        # assemble the colours for the observed classifications
+        for rtn in sorted_classified_rotations:
+            #print(rtn)
+            colors.append(RoomType.colour_of_room(rtn[1]))
+
+        # all pie segments will be of the same size, just different colours
+        y = [segment_size, segment_size, segment_size, segment_size, segment_size, segment_size, segment_size, segment_size]
+        #plt.pie(y, colors=colors, radius=0.1)
+        ax.pie(y, center=(position[0],position[2]), radius=0.7,colors=colors, wedgeprops={'clip_on':True}, frame=False, startangle = (90 - (360.0/8.0)/2.0))
+        #plt.show()
+
     ##
     # Plot a path on the top-down view of the habitat
     ##
-    def visualise_path(self, path):
+    def visualise_map(self, classified_positions, show_directions=True):
+        #grid_size = self.controller.initialization_parameters["gridSize"]
         grid_size = self.controller.initialization_parameters["gridSize"]
 
         reachable_positions = [
             tuple(map(lambda x: roundany(x, grid_size), pos))
+            #for pos in thor_reachable_positions(self.controller)]
             for pos in thor_reachable_positions(self.controller)]
 
         x_max = max([pos[0] for pos in reachable_positions])
         z_max = max([pos[1] for pos in reachable_positions])
         x_min = min([pos[0] for pos in reachable_positions])
         z_min = min([pos[1] for pos in reachable_positions])
-
-        start = self.last_start_position
-        goal = self.last_goal_position
 
         fig, ax = plt.subplots()
 
@@ -125,7 +205,8 @@ class SemanticMapper:
         #ax.scatter(x, z, s=300, c='gray', zorder=1)
 
         # setting up for the top-down picture of the habitat
-        print(str(x_min-grid_size) + " " + str(x_max+grid_size) + " " + str(z_min-grid_size) + " " + str(z_max+grid_size))
+        #print(str(x_min-grid_size) + " " + str(x_max+grid_size) + " " + str(z_min-grid_size) + " " + str(z_max+grid_size))
+        #img = self.get_top_down_frame()
         img = self.get_top_down_frame()
         ex_mul = 7
         ax.imshow(img, extent=[x_min-ex_mul*grid_size, x_max+ex_mul*grid_size, z_min-ex_mul*grid_size, z_max+ex_mul*grid_size])
@@ -135,28 +216,41 @@ class SemanticMapper:
         ax.set_xlim(x_min-lim_mul*grid_size, x_max+lim_mul*grid_size)
         ax.set_ylim(z_min-lim_mul*grid_size, z_max+lim_mul*grid_size)
 
-        # start pos
-        xs = start["x"]
-        zs = start["z"]
-        ax.scatter([xs], [zs], s=100, c='red', zorder=4)
+        if show_directions:
+            y_init = ax.get_ylim()
+            x_init = ax.get_xlim()
 
-        # goal
-        xg = goal["x"]
-        zg = goal["z"]
-        ax.scatter([xg], [zg], s=100, c='green', zorder=4)
+            i = 0
+            # map
+            for pos_rtns in classified_positions:
+                x = pos_rtns[0][0]
+                z = pos_rtns[0][2]
+                #ax.scatter([x], [z], s=30, zorder=2, c="blue")
+                self.plot_semantic_position(pos_rtns[0], pos_rtns[1], ax)
+                i+=1
+                #if i == 3: break
 
-        # path
-        for step in path:
-            x = step[0]["x"]
-            z = step[0]["z"]
-            ax.scatter([x], [z], s=30, zorder=2, c="blue")
+            ax.set_ylim(y_init)
+            ax.set_xlim(x_init)
+        else:
+            # map
+            for pos_rtns in classified_positions:
+                x = pos_rtns[0][0]
+                z = pos_rtns[0][2]
+                colour = RoomType.colour_of_room(pos_rtns[2])
+                ax.scatter([x], [z], s=30, zorder=2, c=colour)
+                #plot_semantic_position(pos_rtns[0], pos_rtns[1], ax)
 
         plt.axis('off')
         plt.show()
 
-    def get_controller(self):
-        return self.controller
+    def display_semantic_map(self):
+        classified_poses = self.prepare_classified_poses_for_processing()
+        self.visualise_map(classified_poses, False)
+        self.visualise_map(classified_poses, True)
+
 
 if __name__ == "__main__":
     spp = SemanticMapper("train_55", LLMType.LLAMA)
     spp.get_top_down_frame()
+    spp.display_semantic_map()
