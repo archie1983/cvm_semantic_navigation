@@ -29,22 +29,12 @@ class SemanticMapper:
         self.data_store_dir = "experiment_data"
         self.LLM_TYPE = llm_type.name
 
-        scene_descr_fname = self.data_store_dir + "/pkl_" + self.LLM_TYPE + "/scene_descr_" + scene_id + ".pkl"
-        if os.path.isfile(scene_descr_fname):
-            file = open(scene_descr_fname,'rb')
-            self.scene_description = pickle.load(file)
-            file.close()
-
-            print("Loaded : " + scene_descr_fname + " scene")
-        else:
-            # if no scenes' data, then nothing to do
-            raise Exception("No scenes data file found. Nothing to do.")
-
-        self.scene_id = scene_id
         #self.lrc = LLMRoomClassifier(llm_type)
         self.dataset = None
         self.controller = None
         self.rnc = RobotNavigationControl()
+
+        self.scene_id = scene_id
 
         self.ae_load_proctor_scene(self.scene_id)
         self.last_start_position = None
@@ -59,6 +49,19 @@ class SemanticMapper:
     def ae_load_proctor_scene(self, scene_id):
         dataset = self.getDataSet()
 
+        # Now load classified points
+        scene_descr_fname = self.data_store_dir + "/pkl_" + self.LLM_TYPE + "/scene_descr_" + scene_id + ".pkl"
+        if os.path.isfile(scene_descr_fname):
+            file = open(scene_descr_fname,'rb')
+            self.scene_description = pickle.load(file)
+            file.close()
+
+            print("Loaded : " + scene_descr_fname + " scene")
+        else:
+            # if no scenes' data, then nothing to do
+            raise Exception("No scenes data file found. Nothing to do.")
+
+        # Now load AI2-THOR scene
         scene_id_split = scene_id.split("_")
         data_set = scene_id_split[0]
         scene_num = int(scene_id_split[1])
@@ -177,7 +180,7 @@ class SemanticMapper:
         # all pie segments will be of the same size, just different colours
         y = [segment_size, segment_size, segment_size, segment_size, segment_size, segment_size, segment_size, segment_size]
         #plt.pie(y, colors=colors, radius=0.1)
-        ax.pie(y, center=(position[0],position[2]), radius=0.7,colors=colors, wedgeprops={'clip_on':True}, frame=False, startangle = (90 - (360.0/8.0)/2.0))
+        ax.pie(y, center=(position[0],position[2]), radius=0.7,colors=colors, wedgeprops={'clip_on':True}, frame=False, startangle = (180 - (360.0/8.0)/2.0))
         #plt.show()
 
     ##
