@@ -5,6 +5,7 @@ import prior
 from llm_room_classifier import LLMRoomClassifier, LLMType
 from room_type import RoomType
 from ml_model_type import MLModelType
+from classifier_fusion_type import ClassifierFusionType
 from scene_description import SceneDescription, ClassifierType
 
 from thortils import (launch_controller,
@@ -51,18 +52,29 @@ class SemanticMapper:
     def ae_load_proctor_scene(self, scene_id):
         dataset = self.getDataSet()
 
-        # Now load classified points
+        # Now figure out file names to load for the results
         if self.LLM_TYPE.type_of_model() == MLModelType.LLM:
             scene_descr_fname = self.data_store_dir + "/pkl_" + self.LLM_TYPE.name + "/scene_descr_" + scene_id + ".pkl"
+            cor_llm_pkl_path = ""
         elif self.LLM_TYPE.type_of_model() == MLModelType.CVM:
             scene_descr_fname = self.data_store_dir + "/pkl_" + self.LLM_TYPE.name + self.additional_data_store_param + "/scene_descr_" + scene_id + ".pkl"
 
+            # when we're looking at CVM results, we also want to load LLM results so that we can fuse them if desired
+            cor_llm_pkl_path = self.data_store_dir + "/pkl_LLAMA/scene_descr_" + scene_id + ".pkl" # corresponding LLM pkl path
+
+        # Now load results of the CVM or LLM classification
         if os.path.isfile(scene_descr_fname):
             file = open(scene_descr_fname,'rb')
             self.scene_description = pickle.load(file)
             file.close()
-
             print("Loaded : " + scene_descr_fname + " scene")
+
+            # If we loaded CVM results, then we should also have a corresponding LLM results to load
+            if os.path.isfile(cor_llm_pkl_path):
+                llm_f = open(cor_llm_pkl_path,'rb')
+                self.scene_description_llm = pickle.load(llm_f)
+                llm_f.close()
+                print("Loaded : " + cor_llm_pkl_path + " scene")
         else:
             # if no scenes' data, then nothing to do
             raise Exception("No scenes data file found. Nothing to do.")
@@ -112,19 +124,49 @@ class SemanticMapper:
         return self.controller
 
     ##
+    # Find a room point in a collection of the points that match the given pose
+    ##
+    def find_observed_point_by_pose(self, pose, room_points):
+        #(pos, rot) = pose # ((10.75, 1.57599937915802, 1.0), (30.000003814697266, 0.0, 0))
+        result = None
+        for rp in room_points:
+            if rp['point_pose'] == pose:
+                result = rp
+                return result
+        return result
+
+    ##
     # Extract all rotations with the given XY position in all room points.
     # It also extracts the classified result and sorts the extracted rotations.
-    # @fuse_cvm_and_llm - A flag of whether we want to fuse CVM classification results with LLM ones.
+    # @fusion_type - Strategy of how we want to fuse CVM classification results with LLM ones. This is only valid when we
     ##
-    def get_all_rotations_of_xy_pose(self, xy_pose, room_points, fuse_cvm_and_llm = False):
+    def get_all_rotations_of_xy_pose(self, xy_pose, room_points, fusion_type = ClassifierFusionType.NO_FUSION):
         result = []
-        room_points = self.scene_description.get_all_points()
+        room_points = self.scene_description.get_all_points() # get CVM points
+        llm_room_points = self.scene_description_llm.get_all_points() # get corresponding LLM points
+
         for rp in room_points: # go through all points
             if rp['point_pose'][0] == xy_pose:
                 if self.LLM_TYPE.type_of_model() == MLModelType.LLM:
                     result.append((int(rp['point_pose'][1][1]), rp["room_type_llm"])) # and extract yaw rotations along with classification result from the required XY position
                 elif self.LLM_TYPE.type_of_model() == MLModelType.CVM:
-                    result.append((int(rp['point_pose'][1][1]), rp["room_type_cvm"])) # and extract yaw rotations along with classification result from the required XY position
+                    llm_rp = self.find_observed_point_by_pose(rp['point_pose'], llm_room_points)
+                    # understand what did LLM classify for this point
+                    if llm_rp is None:
+                        llm_rp_room_type = RoomType.NOT_CLASSIFIED
+                    else:
+                        llm_rp_room_type = llm_rp["room_type_llm"]
+
+                    clas_result = rp["room_type_cvm"]
+
+                    if (fusion_type == ClassifierFusionType.LLM_THEN_CVM): # if we want to combine LLM results with CVM - when LLM hasn't got a clue, use CVM result
+                        if (llm_rp_room_type != RoomType.NOT_CLASSIFIED and llm_rp_room_type != RoomType.NOT_KNOWN):
+                            clas_result = llm_rp_room_type
+                    elif (fusion_type == ClassifierFusionType.CVM_THEN_LLM): # if we want to combine LLM results with CVM - when CVM doesn't know, use LLM result
+                        if (rp["room_type_cvm"] == RoomType.NOT_CLASSIFIED or rp["room_type_cvm"] == RoomType.NOT_KNOWN):
+                            clas_result = llm_rp_room_type
+
+                    result.append((int(rp['point_pose'][1][1]), clas_result)) # and extract yaw rotations along with classification result from the required XY position
 
         result = self.pad_missing_rotations(result)
 
@@ -155,8 +197,9 @@ class SemanticMapper:
     # Go through all of the room points and process all rotations for each point
     # making it ready to plot on the top down frame. This will return
     # classified_pose_rtns_pairs, which will be used in other functions.
+    # @fusion_type - Strategy of how we want to fuse CVM classification results with LLM ones.
     ##
-    def prepare_classified_poses_for_processing(self):
+    def prepare_classified_poses_for_processing(self, fusion_type = ClassifierFusionType.NO_FUSION):
         room_points = self.scene_description.get_all_points()
         classified_pose_rtns_pairs = []
         processed_xy_poses = []
@@ -166,7 +209,7 @@ class SemanticMapper:
             (current_xy, current_rot) = rp['point_pose'] # get current XY position
             if (current_xy in processed_xy_poses): continue
             #print(rp['point_pose'][0])
-            classified_rotations = self.get_all_rotations_of_xy_pose(current_xy, room_points)
+            classified_rotations = self.get_all_rotations_of_xy_pose(current_xy, room_points, fusion_type)
             #print(classified_rotations) # get all rotations for the given XY position
             #self.plot_semantic_position(classified_rotations)
             processed_xy_poses.append(current_xy) # append the XY position to the collection of positions that we don't want to see anymore
@@ -257,8 +300,11 @@ class SemanticMapper:
         plt.axis('off')
         plt.show()
 
-    def display_semantic_map(self):
-        classified_poses = self.prepare_classified_poses_for_processing()
+    ##
+    # @fusion_type - Strategy of how we want to fuse CVM classification results with LLM ones.
+    ##
+    def display_semantic_map(self, fusion_type = ClassifierFusionType.NO_FUSION):
+        classified_poses = self.prepare_classified_poses_for_processing(fusion_type)
         self.visualise_map(classified_poses, False)
         self.visualise_map(classified_poses, True)
 
@@ -266,4 +312,4 @@ class SemanticMapper:
 if __name__ == "__main__":
     spp = SemanticMapper("train_55", LLMType.LLAMA)
     spp.get_top_down_frame()
-    spp.display_semantic_map()
+    spp.display_semantic_map(ClassifierFusionType.NO_FUSION)
