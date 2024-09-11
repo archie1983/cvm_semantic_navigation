@@ -1,6 +1,6 @@
 from enum import Enum
 from room_type import RoomType
-from model_type import ModelType
+from ml_model_type import MLModelType
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from PIL import Image
 from time import time
@@ -13,7 +13,7 @@ class CVMType(Enum):
 
     @staticmethod
     def type_of_model():
-        return ModelType.CVM
+        return MLModelType.CVM
 
 class CVMControl:
     def __init__(self, cvm_type):

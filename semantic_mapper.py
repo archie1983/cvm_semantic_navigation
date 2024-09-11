@@ -4,7 +4,7 @@ import prior
 
 from llm_room_classifier import LLMRoomClassifier, LLMType
 from room_type import RoomType
-from model_type import ModelType
+from ml_model_type import MLModelType
 from scene_description import SceneDescription, ClassifierType
 
 from thortils import (launch_controller,
@@ -52,9 +52,9 @@ class SemanticMapper:
         dataset = self.getDataSet()
 
         # Now load classified points
-        if self.LLM_TYPE.type_of_model() == ModelType.LLM:
+        if self.LLM_TYPE.type_of_model() == MLModelType.LLM:
             scene_descr_fname = self.data_store_dir + "/pkl_" + self.LLM_TYPE.name + "/scene_descr_" + scene_id + ".pkl"
-        elif self.LLM_TYPE.type_of_model() == ModelType.CVM:
+        elif self.LLM_TYPE.type_of_model() == MLModelType.CVM:
             scene_descr_fname = self.data_store_dir + "/pkl_" + self.LLM_TYPE.name + self.additional_data_store_param + "/scene_descr_" + scene_id + ".pkl"
 
         if os.path.isfile(scene_descr_fname):
@@ -114,15 +114,16 @@ class SemanticMapper:
     ##
     # Extract all rotations with the given XY position in all room points.
     # It also extracts the classified result and sorts the extracted rotations.
+    # @fuse_cvm_and_llm - A flag of whether we want to fuse CVM classification results with LLM ones.
     ##
-    def get_all_rotations_of_xy_pose(self, xy_pose, room_points):
+    def get_all_rotations_of_xy_pose(self, xy_pose, room_points, fuse_cvm_and_llm = False):
         result = []
         room_points = self.scene_description.get_all_points()
         for rp in room_points: # go through all points
             if rp['point_pose'][0] == xy_pose:
-                if self.LLM_TYPE.type_of_model() == ModelType.LLM:
+                if self.LLM_TYPE.type_of_model() == MLModelType.LLM:
                     result.append((int(rp['point_pose'][1][1]), rp["room_type_llm"])) # and extract yaw rotations along with classification result from the required XY position
-                elif self.LLM_TYPE.type_of_model() == ModelType.CVM:
+                elif self.LLM_TYPE.type_of_model() == MLModelType.CVM:
                     result.append((int(rp['point_pose'][1][1]), rp["room_type_cvm"])) # and extract yaw rotations along with classification result from the required XY position
 
         result = self.pad_missing_rotations(result)
@@ -228,7 +229,7 @@ class SemanticMapper:
         ax.set_xlim(x_min-lim_mul*grid_size, x_max+lim_mul*grid_size)
         ax.set_ylim(z_min-lim_mul*grid_size, z_max+lim_mul*grid_size)
 
-        if show_directions:
+        if show_directions: # display pie charts with the classified directions
             y_init = ax.get_ylim()
             x_init = ax.get_xlim()
 
@@ -244,7 +245,7 @@ class SemanticMapper:
 
             ax.set_ylim(y_init)
             ax.set_xlim(x_init)
-        else:
+        else: # display a ground-truth map with the dots corresponding to the correct ground truth room colour
             # map
             for pos_rtns in classified_positions:
                 x = pos_rtns[0][0]

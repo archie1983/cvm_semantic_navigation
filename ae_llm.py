@@ -1,7 +1,7 @@
 import ollama
 from enum import Enum
 from room_type import RoomType
-from model_type import ModelType
+from ml_model_type import MLModelType
 
 class LLMType(Enum):
     GEMMA = 1
@@ -22,7 +22,7 @@ class LLMType(Enum):
 
     @staticmethod
     def type_of_model():
-        return ModelType.LLM
+        return MLModelType.LLM
 
 class LLMControl:
     #MODEL_TO_USE = "gemma:7b-instruct-v1.1-q6_K"
