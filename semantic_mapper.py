@@ -4,6 +4,7 @@ import prior
 
 from llm_room_classifier import LLMRoomClassifier, LLMType
 from room_type import RoomType
+from model_type import ModelType
 from scene_description import SceneDescription, ClassifierType
 
 from thortils import (launch_controller,
@@ -25,9 +26,10 @@ import copy
 # already classified points
 ##
 class SemanticMapper:
-    def __init__(self, scene_id, llm_type):
+    def __init__(self, scene_id, llm_type, additional_data_store_param = ""):
         self.data_store_dir = "experiment_data"
-        self.LLM_TYPE = llm_type.name
+        self.LLM_TYPE = llm_type
+        self.additional_data_store_param = additional_data_store_param
 
         #self.lrc = LLMRoomClassifier(llm_type)
         self.dataset = None
@@ -50,7 +52,11 @@ class SemanticMapper:
         dataset = self.getDataSet()
 
         # Now load classified points
-        scene_descr_fname = self.data_store_dir + "/pkl_" + self.LLM_TYPE + "/scene_descr_" + scene_id + ".pkl"
+        if self.LLM_TYPE.type_of_model() == ModelType.LLM:
+            scene_descr_fname = self.data_store_dir + "/pkl_" + self.LLM_TYPE.name + "/scene_descr_" + scene_id + ".pkl"
+        elif self.LLM_TYPE.type_of_model() == ModelType.CVM:
+            scene_descr_fname = self.data_store_dir + "/pkl_" + self.LLM_TYPE.name + self.additional_data_store_param + "/scene_descr_" + scene_id + ".pkl"
+
         if os.path.isfile(scene_descr_fname):
             file = open(scene_descr_fname,'rb')
             self.scene_description = pickle.load(file)
@@ -114,7 +120,10 @@ class SemanticMapper:
         room_points = self.scene_description.get_all_points()
         for rp in room_points: # go through all points
             if rp['point_pose'][0] == xy_pose:
-                result.append((int(rp['point_pose'][1][1]), rp["room_type_llm"])) # and extract yaw rotations along with classification result from the required XY position
+                if self.LLM_TYPE.type_of_model() == ModelType.LLM:
+                    result.append((int(rp['point_pose'][1][1]), rp["room_type_llm"])) # and extract yaw rotations along with classification result from the required XY position
+                elif self.LLM_TYPE.type_of_model() == ModelType.CVM:
+                    result.append((int(rp['point_pose'][1][1]), rp["room_type_cvm"])) # and extract yaw rotations along with classification result from the required XY position
 
         result = self.pad_missing_rotations(result)
 
