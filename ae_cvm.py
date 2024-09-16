@@ -1,5 +1,6 @@
 from enum import Enum
 from room_type import RoomType
+from ml_model_type import MLModelType
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from PIL import Image
 from time import time
@@ -9,6 +10,10 @@ from chameleon import ChameleonInference
 class CVMType(Enum):
     MOONDREAM = 1 # Moondream
     CHAMELEON = 2 # Meta Chameleon
+
+    @staticmethod
+    def type_of_model():
+        return MLModelType.CVM
 
 class CVMControl:
     def __init__(self, cvm_type):

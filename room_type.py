@@ -13,6 +13,39 @@ class RoomType(Enum):
     OFFICE = 7
     STORAGE = 8
 
+    @staticmethod
+    def colour_of_room(room_type):
+        if room_type == RoomType.LIVING_ROOM:
+            return "#8F0000"
+        elif room_type == RoomType.KITCHEN:
+            return "#008F00"
+        elif room_type == RoomType.BEDROOM:
+            return "#00008F"
+        elif room_type == RoomType.BATHROOM:
+            return "#8F8F00"
+        elif room_type == RoomType.OFFICE:
+            return "#8F008F"
+        elif room_type == RoomType.STORAGE:
+            return "#008F8F"
+        else:
+            return "#8F8F8F"
+
+        #match room_type:
+        #    case RoomType.LIVING_ROOM:
+        #        return "#8F0000"
+        #    case RoomType.KITCHEN:
+        #        return "#008F00"
+        #    case RoomType.BEDROOM:
+        #        return "#00008F"
+        #    case RoomType.BATHROOM:
+        #        return "#8F8F00"
+        #    case RoomType.OFFICE:
+        #        return "#8F008F"
+        #    case RoomType.STORAGE:
+        #        return "#008F8F"
+        #    case _:
+        #        return "#8F8F8F"
+
     @classmethod
     def parse_llm_response(self, text):
         ret_val = RoomType.NOT_KNOWN
