@@ -98,3 +98,7 @@ class RoomType(Enum):
     @classmethod
     def all_labels(self):
         return ["LIVING ROOM", "KITCHEN", "BEDROOM", "BATHROOM", "OFFICE", "STORAGE"]
+
+    @classmethod
+    def all_options(self):
+        return [RoomType.LIVING_ROOM, RoomType.KITCHEN, RoomType.BEDROOM, RoomType.BATHROOM, RoomType.OFFICE, RoomType.STORAGE]
