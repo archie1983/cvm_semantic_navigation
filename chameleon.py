@@ -24,11 +24,14 @@ class ChameleonInference():
     ##
     def initialise_for_ai2_thor_room_classification(self):
         #self.question = "What kind of room is this? Please choose from: kitchen, office, bedroom, bathroom, living room"
-        #prompt = "What kind of room is in this image?<image>"
-        #prompt = "What kind of room is in this image?<image> Please answer with one word only."
+        self.question = "What kind of room is in this image?<image>" # prompt 5 -- Runtime error
+        #prompt = "What kind of room is in this image?<image> Please answer with one word only." # -- prompt 6 -- Runtime error
         #prompt = "What kind of room is in this image?<image> Please answer with one word only and choose from the following cathegories: living_room, bathroom, office, kitchen, bedroom."
         #self.question = "What kind of room is in this image?<image> Please provide reasoning for your answer and make the first word in your answer the correct label of the room." # prompt 1
-        self.question = "What kind of room is this?<image> Please choose from: kitchen, office, bedroom, bathroom, living room, storage." # prompt 2
+        #self.question = "What kind of room is this?<image> Please choose from: kitchen, office, bedroom, bathroom, living room, storage." # prompt 2 -- FAILED - always says KITCHEN
+        #self.question = "What kind of room is in this image?<image> Please choose from: kitchen, office, bedroom, bathroom, living room, storage." # prompt 3 -- FAILED - always says KITCHEN
+        #self.question = "What kind of room is in this image?<image> Please provide reasoning for your answer and make the first word in your answer the correct label of the room. Please choose from: kitchen, office, bedroom, bathroom, living room, storage." # prompt 4  -- FAILED - always says KITCHEN
+
 
         return self.question
 
