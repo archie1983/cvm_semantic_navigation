@@ -24,14 +24,20 @@ class ChameleonInference():
     ##
     def initialise_for_ai2_thor_room_classification(self):
         #self.question = "What kind of room is this? Please choose from: kitchen, office, bedroom, bathroom, living room"
-        self.question = "What kind of room is in this image?<image>" # prompt 5 -- Runtime error
+        #self.question = "What kind of room is in this image?<image>" # prompt 5 -- used in experiments
+        #self.question = "What kind of room is this?<image> Please choose from: kitchen, office, bedroom, bathroom, living room, storage."
+
         #prompt = "What kind of room is in this image?<image> Please answer with one word only." # -- prompt 6 -- Runtime error
         #prompt = "What kind of room is in this image?<image> Please answer with one word only and choose from the following cathegories: living_room, bathroom, office, kitchen, bedroom."
         #self.question = "What kind of room is in this image?<image> Please provide reasoning for your answer and make the first word in your answer the correct label of the room." # prompt 1
         #self.question = "What kind of room is this?<image> Please choose from: kitchen, office, bedroom, bathroom, living room, storage." # prompt 2 -- FAILED - always says KITCHEN
         #self.question = "What kind of room is in this image?<image> Please choose from: kitchen, office, bedroom, bathroom, living room, storage." # prompt 3 -- FAILED - always says KITCHEN
-        #self.question = "What kind of room is in this image?<image> Please provide reasoning for your answer and make the first word in your answer the correct label of the room. Please choose from: kitchen, office, bedroom, bathroom, living room, storage." # prompt 4  -- FAILED - always says KITCHEN
+        self.question = "What kind of room is in this image?<image> Please provide reasoning for your answer. Make the first word in your answer the correct label of the room. You may only choose one from the following categories: kitchen, bedroom, bathroom, living room." # 18 Sep 2024 - short sentences, misclassified img56 as bedroom
+        self.question = "What kind of room is in this image?<image> It is definitely one of the following: kitchen, bedroom, bathroom, living room. You must provide reasoning for your answer." # 18 Sep 2024 - short sentences, misclassified img56 as bedroom
+        self.question = "You are an agent with a task to infer a room type from its picture. You must choose from one of the following: kitchen, bedroom, bathroom, living room. You must provide reasoning for your answer. Here is the picture of the room <image>"
+        self.question = "You are an agent with a task to infer a room type from its picture. You must choose from one of the following: kitchen, bedroom, bathroom, living room. Here is the picture of the room <image>" # 18 Sep 2024 - weird answers and hallucinations.
 
+        self.question = "What kind of room is in this image?<image> Please provide reasoning for your answer. You may only choose one from the following categories: kitchen, bedroom, bathroom, living room." # 18 Sep 2024 - passes well on all 4 test questions
 
         return self.question
 
@@ -52,7 +58,7 @@ class ChameleonInference():
 
         generated_ids = self.model.generate(**inputs, max_new_tokens=100)
         out = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-        out = out[len(self.question):] # The answer always contains the question, so trim that away
+        out = out[(len(self.question) - len("<image>")):] # The answer always contains the question, so trim that away
         print(out)
         if expected_answer is not None:
             print("#### " + expected_answer + " @@ url: " + image_url)
