@@ -143,7 +143,8 @@ class SemanticMapper:
     def get_all_rotations_of_xy_pose(self, xy_pose, room_points, fusion_type = ClassifierFusionType.NO_FUSION):
         result = []
         room_points = self.scene_description.get_all_points() # get CVM points
-        llm_room_points = self.scene_description_llm.get_all_points() # get corresponding LLM points
+        if self.LLM_TYPE.type_of_model() == MLModelType.CVM:
+            llm_room_points = self.scene_description_llm.get_all_points() # get corresponding LLM points
 
         for rp in room_points: # go through all points
             if rp['point_pose'][0] == xy_pose:

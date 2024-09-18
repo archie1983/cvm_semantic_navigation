@@ -52,6 +52,7 @@ class ChameleonInference():
 
         generated_ids = self.model.generate(**inputs, max_new_tokens=100)
         out = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+        out = out[len(self.question):] # The answer always contains the question, so trim that away
         print(out)
         if expected_answer is not None:
             print("#### " + expected_answer + " @@ url: " + image_url)

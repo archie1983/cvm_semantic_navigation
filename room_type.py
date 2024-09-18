@@ -47,9 +47,12 @@ class RoomType(Enum):
         #        return "#8F8F8F"
 
     @classmethod
-    def parse_llm_response(self, text):
+    def parse_llm_response(self, text, skip_chars=0):
         ret_val = RoomType.NOT_KNOWN
         nearest_index = 1000000
+
+        if (skip_chars > 0):
+            text = text[skip_chars:]
 
         ##
         # Find the first occurence of any of the rooms. This may not be perfect, but probably will do for now

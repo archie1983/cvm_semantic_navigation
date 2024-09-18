@@ -11,3 +11,4 @@ class HardClassBehaviour(Enum):
     CLASSIFY_WITH_NEITHER = 4 # Skip hard to classify cases altogether (for fair comparison)
     CLASSIFY_HARD_CASES_ONLY_CVM = 5 # Only classify hard scenes and only use CVM
     GUESS_HARD_CASES_ONLY_CVM = 6 # Try guessing (random selection) for hard cases
+    CLASSIFY_WITH_CVM_WHAT_LLM_CANNOT = 7 # Use CVM result for the cases where LLM result is NOT_KNOWN, but ignore the hard to classify cases where LLM didn't classify (NOT_CLASSIFIED)
