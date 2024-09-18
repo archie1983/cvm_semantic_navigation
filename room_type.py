@@ -47,7 +47,7 @@ class RoomType(Enum):
         #        return "#8F8F8F"
 
     @classmethod
-    def parse_llm_response(self, text, skip_chars=0):
+    def parse_llm_response(self, text, skip_chars=0, include_office_and_storage = True):
         ret_val = RoomType.NOT_KNOWN
         nearest_index = 1000000
 
@@ -69,10 +69,10 @@ class RoomType(Enum):
         if "BATHROOM" in text.upper() and nearest_index > text.upper().find("BATHROOM"):
             ret_val = RoomType.BATHROOM
             nearest_index = text.upper().find("BATHROOM")
-        if "OFFICE" in text.upper() and nearest_index > text.upper().find("OFFICE"):
+        if include_office_and_storage and "OFFICE" in text.upper() and nearest_index > text.upper().find("OFFICE"):
             ret_val = RoomType.OFFICE
             nearest_index = text.upper().find("OFFICE")
-        if "STORAGE" in text.upper() and nearest_index > text.upper().find("STORAGE"):
+        if include_office_and_storage and "STORAGE" in text.upper() and nearest_index > text.upper().find("STORAGE"):
             ret_val = RoomType.STORAGE
             nearest_index = text.upper().find("STORAGE")
 

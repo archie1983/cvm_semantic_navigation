@@ -58,6 +58,6 @@ class CVMControl:
 
         print("cvm predict time:", round(time_taken, 3), "s")
 
-        ret_answer = RoomType.parse_llm_response(full_answer)
+        ret_answer = RoomType.parse_llm_response(full_answer, skip_chars=0, include_office_and_storage = False)
 
         return (ret_answer, time_taken, full_answer)
