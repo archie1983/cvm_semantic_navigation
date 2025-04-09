@@ -89,9 +89,12 @@ if __name__ == "__main__":
     cvm = MoonDreamInference()
     cvm.get_tokenizer()
 
-    #cvm.analyze_room('scene_pics/train_56/9.png', "OFFICE")
-    cvm.analyze_room('scene_pics/train_56/12.png', "OFFICE")
-    #cvm.analyze_room('scene_pics/train_56/14.png', "OFFICE")
-    cvm.analyze_room('scene_pics/train_56/16.png', "OFFICE")
-    cvm.analyze_room('scene_pics/train_56/60.png', "BATHROOM")
-    cvm.analyze_room('scene_pics/train_56/56.png', "LIVING ROOM")
+    cvm.classify_room('pictures_first_view/bathroom_1.png', "BATHROOM")
+    cvm.classify_room('pictures_first_view/bathroom_2.png', "BATHROOM")
+    cvm.classify_room('pictures_first_view/bedroom_1.png', "BEDROOM")
+    cvm.classify_room('pictures_first_view/bedroom_2.png', "BEDROOM")
+    cvm.classify_room('pictures_first_view/kitchen_1.png', "KITCHEN")
+    cvm.classify_room('pictures_first_view/kitchen_2.png', "KITCHEN")
+    cvm.classify_room('pictures_first_view/livingroom_1.png', "LIVINGROOM")
+    cvm.classify_room('pictures_first_view/livingroom_2.png', "LIVINGROOM")
+

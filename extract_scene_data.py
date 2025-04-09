@@ -103,7 +103,7 @@ class DataSceneExtractor:
                 rl = "LIVING ROOM"
             existing_room_names.add(rl)
 
-        return set(RoomType.all_labels()) == existing_room_names
+        return set(RoomType.regular_labels()) == existing_room_names
 
     def getDataSet(self):
         if (self.dataset is None):
