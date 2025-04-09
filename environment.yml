@@ -1,5 +1,6 @@
 name: 2024_paper
 channels:
+  - conda-forge
   - pytorch
   - nvidia
   - defaults
@@ -41,6 +42,7 @@ dependencies:
   - bzip2=1.0.8=h5eee18b_6
   - c-ares=1.19.1=h5eee18b_0
   - ca-certificates=2025.2.25=h06a4308_0
+  - cairo=1.16.0=hb05425b_5
   - certifi=2025.1.31=py312h06a4308_0
   - cffi=1.17.1=py312h1fdaa30_1
   - charset-normalizer=3.3.2=pyhd3eb1b0_0
@@ -54,7 +56,6 @@ dependencies:
   - cuda-runtime=12.4.1=0
   - cuda-version=12.8=3
   - cyrus-sasl=2.1.28=h52b45da_1
-  - datasets=3.3.2=py312h06a4308_0
   - dbus=1.13.18=hb2f20db_0
   - debugpy=1.8.11=py312h6a678d5_0
   - defusedxml=0.7.1=pyhd3eb1b0_0
@@ -64,11 +65,19 @@ dependencies:
   - expat=2.6.4=h6a678d5_0
   - ffmpeg=4.3=hf484d3e_0
   - filelock=3.13.1=py312h06a4308_0
+  - font-ttf-dejavu-sans-mono=2.37=hab24e00_0
+  - font-ttf-inconsolata=3.000=h77eed37_0
+  - font-ttf-source-code-pro=2.038=h77eed37_0
+  - font-ttf-ubuntu=0.83=h77eed37_3
   - fontconfig=2.14.1=h55d465d_3
+  - fonts-conda-ecosystem=1=0
+  - fonts-conda-forge=1=0
   - freetype=2.12.1=h4a9f257_0
+  - fribidi=1.0.10=h36c2ea0_0
   - frozenlist=1.5.0=py312h5eee18b_0
-  - fsspec=2024.12.0=py312h06a4308_0
+  - gdk-pixbuf=2.42.10=h5eee18b_1
   - geos=3.10.6=h6a678d5_0
+  - gettext=0.19.8.1=h73d1719_1008
   - gflags=2.2.2=h6a678d5_1
   - giflib=5.2.2=h5eee18b_0
   - glib=2.78.4=h6a678d5_0
@@ -77,12 +86,13 @@ dependencies:
   - gmp=6.3.0=h6a678d5_0
   - gmpy2=2.2.1=py312h5eee18b_0
   - gnutls=3.6.15=he1e5248_0
+  - graphite2=1.3.14=h295c915_1
   - gst-plugins-base=1.14.1=h6a678d5_1
   - gstreamer=1.14.1=h5eee18b_1
   - h11=0.14.0=py312h06a4308_0
+  - harfbuzz=4.3.0=hf52aaf7_2
   - httpcore=1.0.2=py312h06a4308_0
   - httpx=0.27.0=py312h06a4308_0
-  - huggingface_hub=0.29.2=py312h06a4308_0
   - icu=73.1=h6a678d5_0
   - idna=3.7=py312h06a4308_0
   - intel-openmp=2023.1.0=hdb19cb5_46306
@@ -132,11 +142,12 @@ dependencies:
   - libev=4.33=h7f8727e_1
   - libevent=2.1.12=hdbd6064_1
   - libffi=3.4.4=h6a678d5_1
+  - libgcc=7.2.0=h69d50b8_2
   - libgcc-ng=11.2.0=h1234567_1
   - libglib=2.78.4=hdc74915_0
   - libgomp=11.2.0=h1234567_1
   - libgrpc=1.62.2=h2d74bed_0
-  - libiconv=1.16=h5eee18b_3
+  - libiconv=1.17=h166bdaf_0
   - libidn2=2.3.4=h5eee18b_0
   - libjpeg-turbo=2.0.0=h9bf148f_0
   - libllvm14=14.0.6=hecde1de_4
@@ -149,9 +160,10 @@ dependencies:
   - libpng=1.6.39=h5eee18b_0
   - libpq=17.2=hdbd6064_0
   - libprotobuf=4.25.3=he621ea3_0
+  - librsvg=2.54.3=h7abd40a_0
   - libsodium=1.0.18=h7b6447c_0
   - libssh2=1.11.1=h251f7ec_0
-  - libstdcxx-ng=11.2.0=h1234567_1
+  - libstdcxx-ng=13.2.0=hc0a3c3a_7
   - libtasn1=4.19.0=h5eee18b_0
   - libthrift=0.15.0=h1795dd8_2
   - libtiff=4.5.1=hffd6297_1
@@ -164,7 +176,6 @@ dependencies:
   - libxml2=2.13.5=hfdd30dd_0
   - llvm-openmp=14.0.6=h9e868ea_0
   - lz4-c=1.9.4=h6a678d5_1
-  - markupsafe=3.0.2=py312h5eee18b_0
   - matplotlib-inline=0.1.6=py312h06a4308_0
   - mistune=2.0.4=py312h06a4308_0
   - mkl=2023.1.0=h213fc3f_46344
@@ -187,8 +198,6 @@ dependencies:
   - notebook=7.3.2=py312h06a4308_0
   - notebook-shim=0.2.3=py312h06a4308_0
   - numexpr=2.10.1=py312h3c60e43_0
-  - numpy=2.2.2=py312hc5e2394_0
-  - numpy-base=2.2.2=py312h0da6c21_0
   - ocl-icd=2.3.2=h5eee18b_1
   - openh264=2.1.1=h4ff587b_0
   - openjpeg=2.5.2=he7f1fd0_0
@@ -200,10 +209,12 @@ dependencies:
   - packaging=24.2=py312h06a4308_0
   - pandas=2.2.3=py312h6a678d5_0
   - pandocfilters=1.5.0=pyhd3eb1b0_0
+  - pango=1.50.7=hbd2fdc8_0
   - parso=0.8.4=py312h06a4308_0
   - pcre2=10.42=hebb0a14_1
   - pexpect=4.8.0=pyhd3eb1b0_3
   - pip=25.0=py312h06a4308_0
+  - pixman=0.40.0=h36c2ea0_0
   - platformdirs=3.10.0=py312h06a4308_0
   - ply=3.11=py312h06a4308_1
   - prometheus_client=0.21.0=py312h06a4308_0
@@ -259,14 +270,12 @@ dependencies:
   - terminado=0.17.1=py312h06a4308_0
   - tinycss2=1.4.0=py312h06a4308_0
   - tk=8.6.14=h39e8969_0
-  - tokenizers=0.21.0=py312h526025d_0
   - torchaudio=2.5.1=py312_cu124
   - torchtriton=3.1.0=py312
   - torchvision=0.20.1=py312_cu124
   - tornado=6.4.2=py312h5eee18b_0
   - tqdm=4.67.1=py312he106c6f_0
   - traitlets=5.14.3=py312h06a4308_0
-  - transformers=4.49.0=py312h06a4308_0
   - typing-extensions=4.12.2=py312h06a4308_0
   - typing_extensions=4.12.2=py312h06a4308_0
   - tzdata=2025a=h04d1e81_0
@@ -285,15 +294,18 @@ dependencies:
   - zlib=1.2.13=h5eee18b_1
   - zstd=1.5.6=hc292b87_0
   - pip:
-      - accelerate==1.6.0
+      - accelerate==0.32.1
       - addict==2.4.0
       - ai2thor==5.0.0
       - ai2thor-colab==0.1.2
+      - aiofiles==23.2.1
+      - altair==5.5.0
       - annotated-types==0.7.0
       - aws-requests-auth==0.4.3
       - blinker==1.9.0
       - botocore==1.36.26
       - click==8.1.8
+      - cmake==4.0.0
       - configargparse==1.7
       - contourpy==1.3.1
       - cryptography==44.0.2
@@ -302,26 +314,39 @@ dependencies:
       - dash-core-components==2.0.0
       - dash-html-components==2.0.0
       - dash-table==5.0.0
+      - datasets==3.2.0
       - decorator==4.4.2
       - deprecated==1.2.18
+      - editdistance==0.8.1
       - einops==0.8.1
+      - fastapi==0.115.12
+      - ffmpy==0.5.0
       - flask==3.0.3
       - fonttools==4.56.0
+      - fsspec==2024.9.0
+      - gradio==4.38.1
+      - gradio-client==1.1.0
       - huggingface-hub==0.30.2
       - imageio==2.37.0
       - imageio-ffmpeg==0.6.0
       - importlib-metadata==8.6.1
+      - importlib-resources==6.5.2
       - itsdangerous==2.2.0
       - jmespath==1.0.1
       - joblib==1.4.2
       - kiwisolver==1.4.8
+      - markdown-it-py==3.0.0
+      - markupsafe==2.1.5
       - matplotlib==3.10.0
+      - mdurl==0.1.2
       - moviepy==1.0.3
       - msgpack==1.1.0
       - narwhals==1.28.0
+      - numpy==1.26.4
       - ollama==0.4.7
       - open3d==0.19.0
       - opencv-python==4.11.0.86
+      - orjson==3.10.16
       - pillow==10.4.0
       - plotly==6.0.0
       - prior==1.0.3
@@ -329,6 +354,7 @@ dependencies:
       - progressbar2==4.5.0
       - pydantic==2.11.3
       - pydantic-core==2.33.1
+      - pydub==0.25.1
       - pygame==2.6.1
       - pygithub==2.6.1
       - pyjwt==2.10.1
@@ -336,14 +362,28 @@ dependencies:
       - pyparsing==3.2.1
       - pyquaternion==0.9.9
       - python-dotenv==1.0.1
+      - python-multipart==0.0.20
       - python-utils==3.9.1
       - python-xlib==0.33
+      - pyvips==2.2.3
+      - pyvips-binary==8.16.0
       - retrying==1.3.4
+      - rich==14.0.0
+      - ruff==0.11.4
       - scikit-learn==1.6.1
       - scipy==1.15.2
+      - semantic-version==2.10.0
+      - shellingham==1.5.4
+      - starlette==0.46.1
       - sympy==1.13.1
       - threadpoolctl==3.5.0
+      - tokenizers==0.19.1
+      - tomlkit==0.12.0
+      - transformers==4.44.0
+      - typer==0.15.2
       - typing-inspection==0.4.0
+      - uvicorn==0.34.0
+      - websockets==11.0.3
       - werkzeug==3.0.6
       - wrapt==1.17.2
       - zipp==3.21.0
