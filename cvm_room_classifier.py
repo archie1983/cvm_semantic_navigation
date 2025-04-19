@@ -33,6 +33,11 @@ class CVMRoomClassifier:
 
     self.piclist = []
 
+  def __init__(self, cvm_type, prompt_type):
+    cls(cvm_type)
+    self.prompt_type = prompt_type
+    self.glc.set_prompt_type(prompt_type)
+
     #########################################################
 
   def load_stored_data(self):

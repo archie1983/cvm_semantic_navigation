@@ -24,6 +24,12 @@ class CVMControl:
         elif self.cvm_type == CVMType.CHAMELEON:
             self.cvm = ChameleonInference()
 
+        self.prompt_type = ""
+
+    def set_prompt_type(self, prompt_type):
+        self.prompt_type = prompt_type
+        self.cvm.set_prompt_type(prompt_type)
+
     ##
     # Prepare for a room classification question.
     ##

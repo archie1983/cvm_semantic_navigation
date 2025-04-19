@@ -11,6 +11,7 @@ class ChameleonInference():
         self.model = None
         self.question = None
         self.load_model()
+        self.prompt_type = ""
 
     def load_model(self):
         if (self.model == None or self.processor == None):
@@ -26,6 +27,10 @@ class ChameleonInference():
             #model = ChameleonForConditionalGeneration.from_pretrained("facebook/chameleon-7b", torch_dtype=torch.float16, device_map="cuda:0")
             #model = ChameleonForConditionalGeneration.from_pretrained("facebook/chameleon-7b", torch_dtype=torch.bfloat16)
             self.processor = ChameleonProcessor.from_pretrained("facebook/chameleon-7b")
+
+    def set_prompt_type(self, prompt_type):
+        self.prompt_type = prompt_type
+        self.cvm.set_prompt_type(prompt_type)
 
     ##
     # Prepare for a room classification question.
@@ -47,7 +52,25 @@ class ChameleonInference():
 
         self.question = "What kind of room is in this image?<image> Please provide reasoning for your answer. You may only choose one from the following categories: kitchen, bedroom, bathroom, living room." # 18 Sep 2024 - passes well on all 4 test questions
 
-        self.question = "What kind of room is in this image?<image> Please provide reasoning for your answer. You may choose one from the following categories: kitchen, bedroom, bathroom, living room." # p_cot_4lbl_img_middle_nf4
+        match self.prompt_type:
+            case "p_cot_4lbl_img_middle":
+                self.question = "What kind of room is in this image?<image> Please provide reasoning for your answer. You may choose one from the following categories: kitchen, bedroom, bathroom, living room."
+            case "p_cot_6lbl_img_middle":
+                self.question = "What kind of room is in this image?<image> Please provide reasoning for your answer. You may choose one from the following categories: kitchen, office, bedroom, bathroom, living room, storage."
+            case "p_cot_4lbl_img_middle_nf4":
+                self.question = "What kind of room is in this image?<image> Please provide reasoning for your answer. You may choose one from the following categories: kitchen, bedroom, bathroom, living room." # p_cot_4lbl_img_middle_nf4
+            case "p_cot_6lbl_img_middle_nf4":
+                self.question = "What kind of room is in this image?<image> Please provide reasoning for your answer. You may choose one from the following categories: kitchen, office, bedroom, bathroom, living room, storage."
+            case "p_cot_0lbl_img_middle_nf4":
+                self.question = "What kind of room is in this image?<image> Please provide reasoning for your answer."
+            case "p_nocot_4lbl_img_middle_nf4":
+                self.question = "What kind of room is in this image?<image> You may choose one from the following categories: kitchen, bedroom, bathroom, living room."
+            case "p_nocot_6lbl_img_middle_nf4":
+                self.question = "What kind of room is in this image?<image> You may choose one from the following categories: kitchen, office, bedroom, bathroom, living room, storage."
+            case "p_nocot_0lbl_nf4":
+                self.question = "What kind of room is in this image?<image>"
+            case _:
+                pass
 
         return self.question
 

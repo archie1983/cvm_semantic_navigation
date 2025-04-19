@@ -13,7 +13,7 @@ class DataSceneProcessor:
     ##
     # We can override default data storage directory (normally- the name of LLM within experiment_data folder)
     ##
-    def __init__(self, llm_type, cvm_type, classification_method_in, data_store_dir = ""):
+    def __init__(self, llm_type, cvm_type, classification_method_in, data_store_dir = "", prompt_mode = "p_cot_4lbl"):
         self.classification_method = classification_method_in
 
         if (self.classification_method.llm_required()):
@@ -21,12 +21,13 @@ class DataSceneProcessor:
         if (self.classification_method.svc_required()):
             self.src = RoomClassifier(False, ModelType.HYBRID_AI2_THOR) # SVC classifier
         if (self.classification_method.cvm_required()):
-            self.crc = CVMRoomClassifier(cvm_type)
+            self.crc = CVMRoomClassifier(cvm_type, prompt_mode)
         self.NUMBER_OF_SCENES_IN_BATCH = 25
 
         self.LLM_TYPE = llm_type.name
         self.CVM_TYPE = cvm_type.name
         self.atu = AI2THORUtils()
+        self.prompt_mode = prompt_mode
 
         ##
         # We'll read pkl files from here - the ones that already have SVC or LLM classification stored
@@ -42,6 +43,9 @@ class DataSceneProcessor:
         self.scene_mgmt = SceneManagement(self.data_store_dir)
 
         self.DEBUG = False # A flag of whether we want to debug and go through scenes quickly - only analyzing some points.
+
+    def store_processed_data(self):
+        os.rename(self.data_store_dir_cvm, self.data_store_dir_cvm + "/" + self.prompt_mode)
 
     ##
     # Loads a single specified scene file from the data directory
@@ -148,6 +152,27 @@ class DataSceneProcessor:
 if __name__ == "__main__":
     #dse = DataSceneExtractor(LLMType.LLAMA, CVMType.MOONDREAM, ClassificationMethod.SVC_CVM)
     #dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.MOONDREAM, ClassificationMethod.CVM, "data_collection") # 
-    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection") # 
-    #dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.MOONDREAM, ClassificationMethod.SVC_CVM, "data_collection")
+
+    #dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_cot_4lbl_img_middle_nf4") # 
+    #dsp.process_1_batch_of_data_scenes()
+    #dsp.store_processed_data()
+
+    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_cot_6lbl_img_middle_nf4") # 
     dsp.process_1_batch_of_data_scenes()
+    dsp.store_processed_data()
+
+    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_cot_0lbl_img_middle_nf4") # 
+    dsp.process_1_batch_of_data_scenes()
+    dsp.store_processed_data()
+
+    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_4lbl_img_middle_nf4") # 
+    dsp.process_1_batch_of_data_scenes()
+    dsp.store_processed_data()
+
+    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_6lbl_img_middle_nf4") # 
+    dsp.process_1_batch_of_data_scenes()
+    dsp.store_processed_data()
+
+    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_0lbl_nf4") # 
+    dsp.process_1_batch_of_data_scenes()
+    dsp.store_processed_data()
