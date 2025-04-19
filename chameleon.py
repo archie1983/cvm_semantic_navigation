@@ -1,4 +1,4 @@
-from transformers import ChameleonProcessor, ChameleonForConditionalGeneration
+from transformers import ChameleonProcessor, ChameleonForConditionalGeneration, BitsAndBytesConfig
 import torch
 import requests
 from PIL import Image
@@ -14,7 +14,15 @@ class ChameleonInference():
 
     def load_model(self):
         if (self.model == None or self.processor == None):
-            self.model = ChameleonForConditionalGeneration.from_pretrained("facebook/chameleon-7b", torch_dtype=torch.bfloat16, device_map="cuda:0")
+
+            # specify how to quantize the model
+            quantization_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.float16,
+            )
+
+            self.model = ChameleonForConditionalGeneration.from_pretrained("facebook/chameleon-7b", torch_dtype=torch.float16, quantization_config=quantization_config, device_map="cuda:0")
             #model = ChameleonForConditionalGeneration.from_pretrained("facebook/chameleon-7b", torch_dtype=torch.float16, device_map="cuda:0")
             #model = ChameleonForConditionalGeneration.from_pretrained("facebook/chameleon-7b", torch_dtype=torch.bfloat16)
             self.processor = ChameleonProcessor.from_pretrained("facebook/chameleon-7b")
@@ -39,6 +47,8 @@ class ChameleonInference():
 
         self.question = "What kind of room is in this image?<image> Please provide reasoning for your answer. You may only choose one from the following categories: kitchen, bedroom, bathroom, living room." # 18 Sep 2024 - passes well on all 4 test questions
 
+        self.question = "What kind of room is in this image?<image> Please provide reasoning for your answer. You may choose one from the following categories: kitchen, bedroom, bathroom, living room." # p_cot_4lbl_img_middle_nf4
+
         return self.question
 
     ##
@@ -54,7 +64,14 @@ class ChameleonInference():
 
         image = Image.open(image_url)
         #print(str(self.processor == None))
-        inputs = self.processor(self.question, images=image, return_tensors="pt").to(self.model.device, torch.bfloat16)
+        #inputs = self.processor(self.question, images=image, return_tensors="pt").to(self.model.device, torch.float16)
+
+        # Process inputs with Chameleon
+        inputs = self.processor(
+            text=self.question,  # text argument 
+            images=image,        # images argument
+            return_tensors="pt"
+        ).to(self.model.device, torch.float16)
 
         generated_ids = self.model.generate(**inputs, max_new_tokens=100)
         out = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
@@ -73,7 +90,7 @@ class ChameleonInference():
         self.initialise_for_item_extraction()
 
         image = Image.open(image_url)
-        inputs = self.processor(self.question, images=image, return_tensors="pt").to(self.model.device, torch.bfloat16)
+        inputs = self.processor(self.question, images=image, return_tensors="pt").to(self.model.device, torch.float16)
 
         generated_ids = self.model.generate(**inputs, max_new_tokens=100)
         out = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]

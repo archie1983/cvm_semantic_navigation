@@ -1,7 +1,7 @@
 from room_type import RoomType
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from PIL import Image
-import time
+import time, torch
 
 class MoonDreamInference():
 
@@ -16,7 +16,7 @@ class MoonDreamInference():
             model_id = "vikhyatk/moondream2"
             revision = "2024-05-20"
             self.model = AutoModelForCausalLM.from_pretrained(
-                model_id, trust_remote_code=True, revision=revision
+                model_id, trust_remote_code=True, revision=revision, torch_dtype=torch.float16
             ).to("cuda")
             self.tokenizer = AutoTokenizer.from_pretrained(model_id, revision=revision, device_map="auto")
 
@@ -24,9 +24,15 @@ class MoonDreamInference():
     # Prepare for a room classification question.
     ##
     def initialise_for_ai2_thor_room_classification(self):
-        self.question = "What kind of room is this? Please choose from: kitchen, office, bedroom, bathroom, living room, storage" # prompt 2 - one word
+        #self.question = "What kind of room is this? Please choose from: kitchen, office, bedroom, bathroom, living room, storage" # prompt 2 - one word
         #self.question = "What kind of room is in this image? Please provide reasoning for your answer and make the first word in your answer the correct label of the room." # reasoning not provided
         #self.question = "What kind of room is in this image? Please provide reasoning for your answer." # prompt 1 - reasoning
+        self.question = "What kind of room is in this image? Please provide reasoning for your answer. You may choose one from the following categories: kitchen, bedroom, bathroom, living room." # p_cot_4lbl
+        self.question = "What kind of room is in this image? Please provide reasoning for your answer. You may choose one from the following categories: kitchen, office, bedroom, bathroom, living room, storage." # p_cot_6lbl
+        self.question = "What kind of room is in this image? You may choose one from the following categories: kitchen, bedroom, bathroom, living room." # p_nocot_4lbl
+        self.question = "What kind of room is in this image? You may choose one from the following categories: kitchen, office, bedroom, bathroom, living room, storage." # p_nocot_6lbl
+        self.question = "What kind of room is in this image?" #p_nocot_0lbl
+        self.question = "What kind of room is in this image? Please provide reasoning for your answer." # p_cot_0lbl
 
         return self.question
 
