@@ -157,22 +157,22 @@ if __name__ == "__main__":
     #dsp.process_1_batch_of_data_scenes()
     #dsp.store_processed_data()
 
-    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_cot_6lbl_img_middle_nf4") # 
+#    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_cot_6lbl_img_middle_nf4") # 
+#    dsp.process_1_batch_of_data_scenes()
+#    dsp.store_processed_data()
+
+    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_cot_0lbl_img_middle") # 
     dsp.process_1_batch_of_data_scenes()
     dsp.store_processed_data()
 
-    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_cot_0lbl_img_middle_nf4") # 
+    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_4lbl_img_middle") # 
     dsp.process_1_batch_of_data_scenes()
     dsp.store_processed_data()
 
-    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_4lbl_img_middle_nf4") # 
+    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_6lbl_img_middle") # 
     dsp.process_1_batch_of_data_scenes()
     dsp.store_processed_data()
 
-    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_6lbl_img_middle_nf4") # 
-    dsp.process_1_batch_of_data_scenes()
-    dsp.store_processed_data()
-
-    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_0lbl_nf4") # 
+    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_0lbl") # 
     dsp.process_1_batch_of_data_scenes()
     dsp.store_processed_data()
