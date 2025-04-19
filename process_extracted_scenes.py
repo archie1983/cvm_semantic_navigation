@@ -45,7 +45,7 @@ class DataSceneProcessor:
         self.DEBUG = False # A flag of whether we want to debug and go through scenes quickly - only analyzing some points.
 
     def store_processed_data(self):
-        os.rename(self.data_store_dir_cvm, self.data_store_dir_cvm + "/" + self.prompt_mode)
+        os.rename(self.data_store_dir_cvm, self.data_store_dir_cvm + "_" + self.prompt_mode)
 
     ##
     # Loads a single specified scene file from the data directory
