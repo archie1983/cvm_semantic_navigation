@@ -22,7 +22,7 @@ class CVMRoomClassifier:
 
     self.glc = CVMControl(CVMType.CHAMELEON)
 
-  def __init__(self, cvm_type):
+  def __init__(self, cvm_type, prompt_type = ""):
     self.data_counter = 0
     self.false_cnt = 0
     self.true_cnt = 0
@@ -33,8 +33,6 @@ class CVMRoomClassifier:
 
     self.piclist = []
 
-  def __init__(self, cvm_type, prompt_type):
-    cls(cvm_type)
     self.prompt_type = prompt_type
     self.glc.set_prompt_type(prompt_type)
 

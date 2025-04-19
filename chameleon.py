@@ -21,6 +21,7 @@ class ChameleonInference():
                 load_in_4bit=True,
                 bnb_4bit_quant_type="nf4",
                 bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_use_double_quant=True,  # Helps stability
             )
 
             self.model = ChameleonForConditionalGeneration.from_pretrained("facebook/chameleon-7b", torch_dtype=torch.float16, quantization_config=quantization_config, device_map="cuda:0")
@@ -30,7 +31,6 @@ class ChameleonInference():
 
     def set_prompt_type(self, prompt_type):
         self.prompt_type = prompt_type
-        self.cvm.set_prompt_type(prompt_type)
 
     ##
     # Prepare for a room classification question.
