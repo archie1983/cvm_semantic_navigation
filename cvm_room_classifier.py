@@ -38,6 +38,10 @@ class CVMRoomClassifier:
 
     #########################################################
 
+  def set_prompt_type(self, prompt_type):
+    self.prompt_type = prompt_type
+    self.glc.set_prompt_type(prompt_type)
+
   def load_stored_data(self):
     if (not self.stored_labels_loaded):
         self.stored_labels_loaded = True
