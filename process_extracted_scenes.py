@@ -44,6 +44,10 @@ class DataSceneProcessor:
 
         self.DEBUG = False # A flag of whether we want to debug and go through scenes quickly - only analyzing some points.
 
+    def set_prompt_type(self, prompt_type):
+        self.crc.set_prompt_type(prompt_type)
+        self.prompt_mode = prompt_type
+
     def store_processed_data(self):
         os.rename(self.data_store_dir_cvm, self.data_store_dir_cvm + "_" + self.prompt_mode)
 
@@ -157,22 +161,44 @@ if __name__ == "__main__":
     #dsp.process_1_batch_of_data_scenes()
     #dsp.store_processed_data()
 
-    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_cot_6lbl_img_middle_nf4") # 
+    #dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_cot_6lbl_img_middle_nf4") # 
+    #dsp.process_1_batch_of_data_scenes()
+    #dsp.store_processed_data()
+
+#    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_cot_0lbl_img_middle_nf4") # 
+#    dsp.process_1_batch_of_data_scenes()
+#    dsp.store_processed_data()
+
+#    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_4lbl_img_middle_nf4") # 
+#    dsp.process_1_batch_of_data_scenes()
+#    dsp.store_processed_data()
+
+    #dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_6lbl_img_middle_nf4") # 
+#    dsp.set_prompt_type("p_nocot_6lbl_img_middle_nf4")
+#    dsp.process_1_batch_of_data_scenes()
+#    dsp.store_processed_data()
+
+#    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_0lbl_nf4") # 
+#    dsp.set_prompt_type("p_nocot_0lbl_nf4")
+#    dsp.process_1_batch_of_data_scenes()
+#    dsp.store_processed_data()
+
+    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_cot_4lbl_img_end_nf4") # 
     dsp.process_1_batch_of_data_scenes()
     dsp.store_processed_data()
 
-    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_cot_0lbl_img_middle_nf4") # 
+    dsp.set_prompt_type("p_cot_6lbl_img_end_nf4")
     dsp.process_1_batch_of_data_scenes()
     dsp.store_processed_data()
 
-    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_4lbl_img_middle_nf4") # 
+    dsp.set_prompt_type("p_cot_0lbl_img_end_nf4")
     dsp.process_1_batch_of_data_scenes()
     dsp.store_processed_data()
 
-    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_6lbl_img_middle_nf4") # 
+    dsp.set_prompt_type("p_nocot_4lbl_img_end_nf4")
     dsp.process_1_batch_of_data_scenes()
     dsp.store_processed_data()
 
-    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_0lbl_nf4") # 
+    dsp.set_prompt_type("p_nocot_6lbl_img_end_nf4")
     dsp.process_1_batch_of_data_scenes()
     dsp.store_processed_data()

@@ -69,9 +69,20 @@ class ChameleonInference():
                 self.question = "What kind of room is in this image?<image> You may choose one from the following categories: kitchen, office, bedroom, bathroom, living room, storage."
             case "p_nocot_0lbl_nf4":
                 self.question = "What kind of room is in this image?<image>"
+            case "p_cot_4lbl_img_end_nf4":
+                self.question = "What kind of room is in this image? Please provide reasoning for your answer. You may choose one from the following categories: kitchen, bedroom, bathroom, living room.<image>"
+            case "p_cot_6lbl_img_end_nf4":
+                self.question = "What kind of room is in this image? Please provide reasoning for your answer. You may choose one from the following categories: kitchen, office, bedroom, bathroom, living room, storage.<image>"
+            case "p_cot_0lbl_img_end_nf4":
+                self.question = "What kind of room is in this image? Please provide reasoning for your answer.<image>"
+            case "p_nocot_4lbl_img_end_nf4":
+                self.question = "What kind of room is in this image? You may choose one from the following categories: kitchen, bedroom, bathroom, living room.<image>"
+            case "p_nocot_6lbl_img_end_nf4":
+                self.question = "What kind of room is in this image? You may choose one from the following categories: kitchen, office, bedroom, bathroom, living room, storage.<image>"
             case _:
                 pass
 
+        print("Q: ", self.question)
         return self.question
 
     ##
