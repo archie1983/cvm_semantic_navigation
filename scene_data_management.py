@@ -33,6 +33,7 @@ class ClassificationMethod(Enum):
 class SceneManagement():
     def __init__(self, data_store_dir):
         self.data_store_dir = data_store_dir
+        self.num_extracted_scenes = 0
 
     ##
     # Returns the highest index of scenes explored
@@ -51,8 +52,12 @@ class SceneManagement():
             cur_index = int(els[-1][:-4])
             if (cur_index > highest_index):
                 highest_index = cur_index
+                self.num_extracted_scenes += 1
 
         return highest_index
+
+    def get_num_extracted_scenes(self):
+        return self.num_extracted_scenes
 
     ##
     # Returns the highest index of scenes processed by the DataSceneProcessor

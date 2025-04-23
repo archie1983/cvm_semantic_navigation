@@ -5,7 +5,7 @@ from llm_room_classifier import LLMRoomClassifier # LLM room classifier
 from room_classifier import RoomClassifier # SVC room classifier
 from cvm_room_classifier import CVMRoomClassifier # CVM room classifier
 from ModelType import ModelType
-import pickle, os
+import pickle, os, torch, time
 from ai2_thor_utils import AI2THORUtils
 from scene_description import SceneDescription
 
@@ -40,7 +40,7 @@ class DataSceneProcessor:
         ## This is where we'll store new prepared pkl files - the ones that will also have CVM classification stored
         self.data_store_dir_cvm = "experiment_data/" + "pkl_" + self.CVM_TYPE
 
-        self.scene_mgmt = SceneManagement(self.data_store_dir)
+        self.scene_mgmt = SceneManagement(self.data_store_dir_cvm)
 
         self.DEBUG = False # A flag of whether we want to debug and go through scenes quickly - only analyzing some points.
 
@@ -88,13 +88,13 @@ class DataSceneProcessor:
         # method
         # If pickle file for our scene description exists, then move on to the next
         # scene, otherwise explore this one
-        highest_scene_index = self.scene_mgmt.last_index_processed()
+        highest_scene_index = self.scene_mgmt.last_index_extracted()
         print("Highest index processed: " + str(highest_scene_index))
-        processed_scenes_in_this_batch = 0
+        processed_scenes_in_this_batch = self.scene_mgmt.get_num_extracted_scenes()
 
         while processed_scenes_in_this_batch < self.NUMBER_OF_SCENES_IN_BATCH:
             scene_id = "train_" + str(highest_scene_index + 1)
-            print("Processing " + scene_id)
+            print("Processing " + scene_id, " ", processed_scenes_in_this_batch, " ", scene_id)
             sd = self.load_scene_file(scene_id)
             highest_scene_index += 1
             if not sd:
@@ -153,6 +153,46 @@ class DataSceneProcessor:
 
         self.store_scene_file_cvm(scene_id, new_sd_with_cvm)
 
+    def _recovery_procedure(self, attempt):
+        """Multi-stage recovery for severe CUDA errors"""
+        time.sleep(1)  # Cool-down period
+        
+        # Stage 1: Basic cleanup
+        try:
+            torch.cuda.empty_cache()
+        except RuntimeError:
+            pass
+        
+        # Stage 2: More aggressive reset
+        if attempt > 0:
+            try:
+                torch.cuda.synchronize()
+            except RuntimeError:
+                pass
+        
+        # Stage 3: Nuclear option
+        if attempt > 1:
+            self._hard_reset_cuda()
+
+    def _hard_reset_cuda(self):
+        """Last-resort CUDA recovery"""
+        print("Performing hard CUDA reset")
+        try:
+            # Try proper cleanup first
+            torch.cuda.empty_cache()
+            # Reset Python-side state
+            torch.cuda.init()
+        except:
+            # If all else fails, suggest environment-level reset
+            print("""
+            CRITICAL: CUDA requires full environment reset.
+            Suggestions:
+            1. Restart Python process
+            2. Run 'nvidia-smi --gpu-reset -i [gpu_id]'
+            3. Reboot machine if persistent
+            """)
+            raise RuntimeError("CUDA device needs hard reset")
+
 if __name__ == "__main__":
     #dse = DataSceneExtractor(LLMType.LLAMA, CVMType.MOONDREAM, ClassificationMethod.SVC_CVM)
     #dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.MOONDREAM, ClassificationMethod.CVM, "data_collection") # 
@@ -183,22 +223,86 @@ if __name__ == "__main__":
 #    dsp.process_1_batch_of_data_scenes()
 #    dsp.store_processed_data()
 
-    dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_cot_4lbl_img_end_nf4") # 
-    dsp.process_1_batch_of_data_scenes()
-    dsp.store_processed_data()
+    runtime_err_count = 0
+#    attempt = 0
+#    while True:
+#        try:
+#            dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_cot_4lbl_img_end_nf4") # 
+#            dsp.process_1_batch_of_data_scenes()
+#            dsp.store_processed_data()
+#        except RuntimeError as e:
+#            runtime_err_count += 1
+#            attempt += 1
+#            dsp._recovery_procedure(attempt)
+#            continue
+#        break
 
-    dsp.set_prompt_type("p_cot_6lbl_img_end_nf4")
-    dsp.process_1_batch_of_data_scenes()
-    dsp.store_processed_data()
+#    print("Runtime Error happened: ", runtime_err_count, " times.")
 
-    dsp.set_prompt_type("p_cot_0lbl_img_end_nf4")
-    dsp.process_1_batch_of_data_scenes()
-    dsp.store_processed_data()
+#    attempt = 0
+#    while True:
+#        try:
+#            dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_cot_6lbl_img_end_nf4") 
+#            #dsp.set_prompt_type("p_cot_6lbl_img_end_nf4")
+#            dsp.process_1_batch_of_data_scenes()
+#            dsp.store_processed_data()
+#        except RuntimeError as e:
+#            runtime_err_count += 1
+#            attempt += 1
+#            dsp._recovery_procedure(attempt)
+##            dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_cot_6lbl_img_end_nf4")
+#            continue
+#        break
+#
+#    print("Runtime Error happened: ", runtime_err_count, " times.")
 
-    dsp.set_prompt_type("p_nocot_4lbl_img_end_nf4")
-    dsp.process_1_batch_of_data_scenes()
-    dsp.store_processed_data()
+#    attempt = 0
+#    while True:
+#        try:
+#            dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_cot_0lbl_img_end_nf4")
+#            dsp.set_prompt_type("p_cot_0lbl_img_end_nf4")
+#            dsp.process_1_batch_of_data_scenes()
+#            dsp.store_processed_data()
+#        except RuntimeError as e:
+#            runtime_err_count += 1
+#            attempt += 1
+#            dsp._recovery_procedure(attempt)
+# #           dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_cot_0lbl_img_end_nf4")
+#            continue
+#        break
 
-    dsp.set_prompt_type("p_nocot_6lbl_img_end_nf4")
-    dsp.process_1_batch_of_data_scenes()
-    dsp.store_processed_data()
+#    print("Runtime Error happened: ", runtime_err_count, " times.")
+
+#    attempt = 0
+#    while True:
+#        try:
+#            dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_4lbl_img_end_nf4")
+#            dsp.set_prompt_type("p_nocot_4lbl_img_end_nf4")
+#            dsp.process_1_batch_of_data_scenes()
+#            dsp.store_processed_data()
+#        except RuntimeError as e:
+#            runtime_err_count += 1
+#            attempt += 1
+#            dsp._recovery_procedure(attempt)
+#            dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_4lbl_img_end_nf4")
+#            continue
+#        break
+
+    print("Runtime Error happened: ", runtime_err_count, " times.")
+
+    attempt = 0
+    while True:
+        try:
+            dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_6lbl_img_end_nf4")
+            dsp.set_prompt_type("p_nocot_6lbl_img_end_nf4")
+            dsp.process_1_batch_of_data_scenes()
+            dsp.store_processed_data()
+        except RuntimeError as e:
+            runtime_err_count += 1
+            attempt += 1
+            dsp._recovery_procedure(attempt)
+#            dsp = DataSceneProcessor(LLMType.LLAMA, CVMType.CHAMELEON, ClassificationMethod.CVM, "data_collection", "p_nocot_6lbl_img_end_nf4")
+            continue
+        break
+
+    print("Runtime Error happened: ", runtime_err_count, " times.")
