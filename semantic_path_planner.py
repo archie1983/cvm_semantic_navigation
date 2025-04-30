@@ -4,6 +4,7 @@ import prior
 
 from llm_room_classifier import LLMRoomClassifier, LLMType
 from room_type import RoomType
+from ai2_thor_utils import what_room_is_point_in_ground_truth, get_rooms_ground_truth, convert_pose_set2tuple
 from scene_description import SceneDescription, ClassifierType
 
 from thortils import (launch_controller,
@@ -16,9 +17,11 @@ from thortils.controller import _resolve
 from thortils.object import thor_closest_object_of_type
 from ae_robot_simulation_control import RobotNavigationControl
 
+import matplotlib
 import matplotlib.pyplot as plt
 from PIL import Image
 import copy
+from IPython import get_ipython
 
 ##
 # This class will analyze harvested scene data and ask LLM:
@@ -32,6 +35,10 @@ class SemanticPathPlanner:
     def __init__(self, scene_id, llm_type):
         self.data_store_dir = "experiment_data"
         self.LLM_TYPE = llm_type.name
+
+        ## figure out where are we running- in terminal or jupyter
+        if not self.is_running_in_jupyter():
+            matplotlib.use('Agg')
 
         scene_descr_fname = self.data_store_dir + "/pkl_" + self.LLM_TYPE + "/scene_descr_" + scene_id + ".pkl"
         if os.path.isfile(scene_descr_fname):
@@ -71,8 +78,9 @@ class SemanticPathPlanner:
         print("Loading : " + data_set + "[" + str(scene_num) + "]")
 
         house = dataset[data_set][scene_num]
+        self.rooms = get_rooms_ground_truth(house)
 
-        self.controller = launch_controller({"scene": house, "VISIBILITY_DISTANCE": 3.0})
+        self.controller = launch_controller({"scene": house, "VISIBILITY_DISTANCE": 3.0, "headless": False})
 
         self.rnc.set_controller(self.controller)
 
@@ -117,7 +125,7 @@ class SemanticPathPlanner:
         #path = self.get_path_to("Fridge")
         #print(str(path))
 
-        return path
+        return (path, room_to_look_in, object_to_look_at)
 
     ##
     # Asking LLM to tell us where to look for a bottle of beer
@@ -175,7 +183,7 @@ class SemanticPathPlanner:
         #path = self.get_path_to("Fridge")
         #print(str(path))
 
-        return path
+        return (path, room_to_look_in, object_to_look_at)
 
     def bring_me_this_from_actual_objs(self, what_to_bring):
         work_scene = self.scene_description
@@ -222,13 +230,14 @@ class SemanticPathPlanner:
             skyboxColor="white",
             raise_for_failure=True,
         )
+
         top_down_frame = event.third_party_camera_frames[-1]
         return Image.fromarray(top_down_frame)
 
     ##
     # Plot a path on the top-down view of the habitat
     ##
-    def visualise_path(self, path):
+    def visualise_path(self, path, store_url = "1.png"):
         grid_size = self.controller.initialization_parameters["gridSize"]
 
         reachable_positions = [
@@ -278,13 +287,57 @@ class SemanticPathPlanner:
             ax.scatter([x], [z], s=30, zorder=2, c="blue")
 
         plt.axis('off')
-        plt.show()
+
+        if self.is_running_in_jupyter():
+            plt.show()
+        else:
+            #plt.savefig(self.habitat_mgmt.get_current_top_view_fname())
+            plt.savefig(store_url)
 
     def get_controller(self):
         return self.controller
 
+    ##
+    # Test finding some object 100 times.
+    # Store both the selected room and the selected object.
+    ##
+    def test_goal_finding(self, num_times = 100, object_name = "bottle of beer"):
+        results = []
+        self.test_data_dir = self.data_store_dir + "/test_" + self.LLM_TYPE
+        if not os.path.exists(self.test_data_dir):
+            os.makedirs(self.test_data_dir)
+
+        self.results_fname = self.test_data_dir + "/" + str(num_times) + "_" + object_name.replace(" ", "_") + "_" + self.scene_id + ".pkl"
+
+        for i in range(num_times):
+            (path, room, object) = self.bring_me_this(object_name)
+            #print(path)
+            end_point_room = what_room_is_point_in_ground_truth(self.rooms, convert_pose_set2tuple(path[-1])[0])
+            print("END POINT IN: ", end_point_room, " WANTED: ", room)
+            results.append((room, object))
+
+            self.gen_path_img_fname = self.test_data_dir + "/" + str(i + 1) + "_of_" + str(
+                num_times) + "_" + object_name.replace(" ", "_") + "_" + self.scene_id + ".png"
+
+            self.visualise_path(path, self.gen_path_img_fname)
+
+        pickle.dump(results, open(self.results_fname, "wb"))
+        return results
+
+    ##
+    # A way to tell if we're running in jupyter or not
+    # If in jupyter, we might want to show matplotlibs,
+    # but if in terminal, then we may want to save them.
+    ##
+    def is_running_in_jupyter(self):
+        try:
+            return get_ipython() is not None
+        except ImportError:
+            return False
+
 if __name__ == "__main__":
     spp = SemanticPathPlanner("train_55", LLMType.LLAMA)
     #path = spp.bring_me_a_bottle_of_beer()
-    path = spp.bring_me_a_bottle_of_beer_from_actual_objs()
-    spp.visualise_path(path)
+    #spp.test_goal_finding(1, "A fresh, cold, unopened bottle of beer")
+    spp.test_goal_finding(1, "a baseball bat")
+    #spp.visualise_path(path)

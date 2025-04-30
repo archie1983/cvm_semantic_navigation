@@ -249,6 +249,7 @@ class LLMControl:
         #print("obj list post: " + str(object_list))
 
         #print(" LLM :" + self.llm_type.ollama_tag())
+        print("Q CONTROL3: ", self.question)
         stream = ollama.chat(
             model = self.llm_type.ollama_tag(),
             #model='gemma:7b-instruct-q6_K',
@@ -259,6 +260,7 @@ class LLMControl:
         )
 
         full_answer = ""
+        ret_answer = "NONE"
         cur_chunk = ""
         #ret_answer = -1
 
@@ -317,6 +319,7 @@ class LLMControl:
         return ret_answer
 
     def get_answer_structured_qry(self):
+        print("Q CONTROL1: ", self.question)
         stream = ollama.chat(
             model=self.llm_type.ollama_tag(),
             messages=[
@@ -333,6 +336,7 @@ class LLMControl:
 
 
     def get_answer(self):
+        print("Q CONTROL2: ", self.question)
         stream = ollama.chat(
             model = self.llm_type.ollama_tag(),
             #model='gemma:7b-instruct-q6_K',
