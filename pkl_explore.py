@@ -2,6 +2,7 @@ import glob
 import pickle
 from scene_description import SceneDescription
 import shutil, os
+from room_type import RoomType
 
 def find_observed_point_by_pose(pose, room_points):
     #(pos, rot) = pose # ((10.75, 1.57599937915802, 1.0), (30.000003814697266, 0.0, 0))
@@ -18,7 +19,8 @@ def process_scene_files():
     #pkl_store = "experiment_data/pkl_MOONDREAM_one_word/*.pkl"
     #pkl_store = "experiment_data/pkl_LLAMA/scene_descr_train_10.pkl"
     #pkl_store = "experiment_data/pkl_MOONDREAM_one_word/scene_descr_train_10.pkl"
-    pkl_store = "experiment_data/pkl_CHAMELEON/*.pkl"
+    #pkl_store = "experiment_data/pkl_CHAMELEON/*.pkl"
+    pkl_store = "experiment_data/pkl_CHAMELEON_p_cot_6lbl_img_middle/scene_descr_train_55.pkl"
 
     scene_files = glob.glob(pkl_store) # files showing gemma scenes
     #scene_files2 = glob.glob(pkl_store2)
@@ -43,7 +45,9 @@ def process_scene_files():
         #print(room_points[0])
         for i in range(len(room_points)):
             all_rp += 1
-            #print(room_points[i]['room_type_svc'].name + " :: " + room_points[i]['room_type_cvm'].name)
+            #print(room_points[i]['room_type_llm'].name + " :: " + room_points[i]['room_type_cvm'].name)
+            if room_points[i]["room_type_llm"] == RoomType.NOT_CLASSIFIED or room_points[i]["room_type_llm"] == RoomType.NOT_KNOWN:
+                print(room_points[i]["room_type_llm"])
             #print(room_points[i].keys())
             #pic_path = room_points[i]['front_view_at_this_point']
             #print(pic_path)

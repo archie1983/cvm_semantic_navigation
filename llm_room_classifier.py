@@ -85,15 +85,15 @@ class LLMRoomClassifier:
 
       return ans
 
-  def where_to_look_first(self, what_to_look_for, where_to_look):
+  def where_to_look_first(self, what_to_look_for, obj_list_to_explore):
       objs_to_look_near = ""
-      for obj in where_to_look:
+      for obj in obj_list_to_explore:
           objs_to_look_near += obj + ", "
 
       objs_to_look_near = objs_to_look_near[:-2]
 
       self.glc.construct_object_selector_question(what_to_look_for, objs_to_look_near)
-      ans = self.glc.get_object_selector_answer(where_to_look)
+      ans = self.glc.get_object_selector_answer(obj_list_to_explore)
 
       print("ANS: " + ans)
       return ans

@@ -32,7 +32,13 @@ from IPython import get_ipython
 # object.
 ##
 class SemanticPathPlanner:
-    def __init__(self, scene_id, llm_type):
+    def __init__(self, scene_id, llm_type, hyb_data = ""):
+        '''
+
+        :param scene_id: ID of the scene we are going to use (e.g. train_55)
+        :param llm_type: The LLM type we want (defined in LLMType in ae_llm.py
+        :param hyb_data: If we want to hybridize data, then this has to contain VLM data directory
+        '''
         self.data_store_dir = "experiment_data"
         self.LLM_TYPE = llm_type.name
 
@@ -41,6 +47,7 @@ class SemanticPathPlanner:
             matplotlib.use('Agg')
 
         scene_descr_fname = self.data_store_dir + "/pkl_" + self.LLM_TYPE + "/scene_descr_" + scene_id + ".pkl"
+
         if os.path.isfile(scene_descr_fname):
             file = open(scene_descr_fname,'rb')
             self.scene_description = pickle.load(file)
@@ -50,6 +57,20 @@ class SemanticPathPlanner:
         else:
             # if no scenes' data, then nothing to do
             raise Exception("No scenes data file found. Nothing to do.")
+
+        ## If we want data hybridization, then open the VLM data file
+        self.scene_description_cvm = None
+        if hyb_data != "":
+            scene_descr_cvm_fname = self.data_store_dir + "/pkl_" + hyb_data + "/scene_descr_" + scene_id + ".pkl"
+            if os.path.isfile(scene_descr_cvm_fname):
+                file = open(scene_descr_cvm_fname,'rb')
+                self.scene_description_cvm = pickle.load(file)
+                file.close()
+
+                print("Loaded : " + scene_descr_cvm_fname + " scene")
+            else:
+                # if no scenes' data, then nothing to do
+                raise Exception("No scenes data file found. Nothing to do.")
 
         self.scene_id = scene_id
         self.lrc = LLMRoomClassifier(llm_type)
@@ -176,7 +197,7 @@ class SemanticPathPlanner:
 
         room_to_look_in = self.lrc.where_to_find_this(what_to_bring)
         object_names_to_look_at = work_scene.getAllVisibleObjectNamesInThisRoom(ClassifierType.LLM, room_to_look_in)
-        print(object_names_to_look_at)
+        #print(object_names_to_look_at)
         object_to_look_at = self.lrc.where_to_look_first(what_to_bring, object_names_to_look_at)
 
         path = self.get_path_to(object_to_look_at)
@@ -185,26 +206,118 @@ class SemanticPathPlanner:
 
         return (path, room_to_look_in, object_to_look_at)
 
-    def bring_me_this_from_actual_objs(self, what_to_bring):
+    def get_all_points_of_room_type_hyb(self, room_to_look_in):
+        '''
+        A replacement for SceneDescription.get_all_points_of_room_type for the purposes of room classifier hybridization.
+        :param room_to_look_in: Room of interest
+        :return: a set of points belonging to given room which is chosen using the hybrid classifier.
+        '''
         work_scene = self.scene_description
+        vlm_scene = self.scene_description_cvm
 
+        ret_points = []
+        for point in vlm_scene.points_of_scene:
+            # go through VLM points and immediately look up LLM point at the same pose.
+            # If LLM point doesn't exist, then use VLM point. If LLM point does exist,
+            # then use LLM point.
+            llm_point = self.find_observed_point_by_pose(point['point_pose'], work_scene.points_of_scene)
+            if llm_point is None or llm_point["room_type_llm"] == RoomType.NOT_CLASSIFIED or llm_point["room_type_llm"] == RoomType.NOT_KNOWN:
+                # If LLM doesn't know, then use VLM's knowledge
+                #print("VLM turn")
+                if point is not None and point["room_type_cvm"] == room_to_look_in:
+                    #print("VLM helped")
+                    ret_points.append(point)
+            else:
+                # If LLM knows the room label, then use LLM's knowledge
+                #print("LLM did the job")
+                ret_points.append(llm_point)
+
+        return ret_points
+
+    def find_observed_point_by_pose(self, pose, room_points):
+        '''
+        Looks up a point in the given set by its pose
+        :param pose:
+        :param room_points:
+        :return:
+        '''
+        #(pos, rot) = pose # ((10.75, 1.57599937915802, 1.0), (30.000003814697266, 0.0, 0))
+        result = None
+        for rp in room_points:
+            if rp['point_pose'] == pose:
+                result = rp
+                return result
+        return result
+
+    def getAllVisibleObjectNamesInThisRoom_hyb(self, rt):
+        if self.scene_description_cvm is None:
+            return self.scene_description.getAllVisibleObjectNamesInThisRoom(ClassifierType.LLM, rt)
+        else:
+            points = self.get_all_points_of_room_type_hyb(rt)
+            ret_set = set()
+            for p in points:
+                ret_set = ret_set.union(p["visible_object_names"])
+
+            return ret_set
+
+    def getAllVisibleObjectsInThisRoom_hyb(self, rt):
+        if self.scene_description_cvm is None:
+            return self.scene_description.getAllVisibleObjectsInThisRoom(ClassifierType.LLM, rt)
+        else:
+            points = self.get_all_points_of_room_type_hyb(rt)
+            ret_list = []
+            for p in points:
+                # print(str(p["visible_objects_at_this_point"]))
+                # ret_list = {*ret_list, *p["visible_objects_at_this_point"]} # join two lists
+                ret_list += p["visible_objects_at_this_point"]
+
+            return ret_list
+
+    def bring_me_this_from_actual_objs(self, what_to_bring):
+        '''
+        Querying the LLM for the full thing. We have an item that we want. First we ask LLM which room to look for it,
+        then we ask what item in that room is it going to be next to?
+        :param what_to_bring: Item wanted
+        :return: a tuple of path, chosen room, chosen object category
+        '''
+        work_scene = self.scene_description # the earlier processed scene using LLM
+
+        # Query LLM for a room where we need to look for the wanted item (can be RoomType.NOT_KNOWN)
         room_to_look_in = self.lrc.where_to_find_this(what_to_bring)
-        object_names_to_look_at = work_scene.getAllVisibleObjectNamesInThisRoom(ClassifierType.LLM, room_to_look_in)
-        actual_objects_to_look_at = work_scene.getAllVisibleObjectsInThisRoom(ClassifierType.LLM, room_to_look_in)
+
+        if not (room_to_look_in in RoomType.all_options(False)):
+            # If the chosen room is not one of: Bathroom, Kitchen, Living Room, Bedroom, then stop here.
+            return (None, None, None, None)
+
+        # All visible objects (names only) in the room that was selected (can be empty set)
+        #object_names_to_look_at = work_scene.getAllVisibleObjectNamesInThisRoom(ClassifierType.LLM, room_to_look_in)
+        object_names_to_look_at = self.getAllVisibleObjectNamesInThisRoom_hyb(room_to_look_in)
+        if len(object_names_to_look_at) < 1:
+            # If there are no object names in the selected room, then stop here.
+            return (None, room_to_look_in, None, None)
+
+        # A list of all visible actual objects in the selected room (can be empty list)
+        #actual_objects_to_look_at = work_scene.getAllVisibleObjectsInThisRoom(ClassifierType.LLM, room_to_look_in)
+        actual_objects_to_look_at = self.getAllVisibleObjectsInThisRoom_hyb(room_to_look_in)
         #print(object_names_to_look_at)
+        # Query LLM for the object name from object_names_to_look_at list that is closest match for the wanted object
         object_to_look_at = self.lrc.where_to_look_first(what_to_bring, object_names_to_look_at)
 
+        # Select an actual object based on the chosen object name
+        needed_obj = None
         for obj in actual_objects_to_look_at:
             if obj["objectType"] == object_to_look_at:
                 needed_obj = obj
                 break
 
-        #path = self.get_path_to(object_to_look_at)
-        path = self.get_path_to_actual_object(needed_obj)
-        #path = self.get_path_to("Fridge")
-        #print(str(path))
+        # If an actual object could not be selected, then we can't plan a path
+        if needed_obj is not None:
+            path = self.get_path_to_actual_object(needed_obj)
+            # print(str(path))
+        else:
+            path = None
 
-        return path
+        return (path, room_to_look_in, object_to_look_at, needed_obj)
 
     ##
     # For display purposes - the top down view of the habitat
@@ -301,25 +414,66 @@ class SemanticPathPlanner:
     # Test finding some object 100 times.
     # Store both the selected room and the selected object.
     ##
-    def test_goal_finding(self, num_times = 100, object_name = "bottle of beer"):
+    def test_goal_finding(self, num_times = 100, object_to_find = "bottle of beer"):
         results = []
         self.test_data_dir = self.data_store_dir + "/test_" + self.LLM_TYPE
         if not os.path.exists(self.test_data_dir):
             os.makedirs(self.test_data_dir)
 
-        self.results_fname = self.test_data_dir + "/" + str(num_times) + "_" + object_name.replace(" ", "_") + "_" + self.scene_id + ".pkl"
+        self.results_fname = self.test_data_dir + "/" + str(num_times) + "_" + object_to_find.replace(" ", "_") + "_" + self.scene_id + ".pkl"
 
         for i in range(num_times):
-            (path, room, object) = self.bring_me_this(object_name)
-            #print(path)
-            end_point_room = what_room_is_point_in_ground_truth(self.rooms, convert_pose_set2tuple(path[-1])[0])
-            print("END POINT IN: ", end_point_room, " WANTED: ", room)
-            results.append((room, object))
+            (path, wanted_room, object_name, actual_object) = self.bring_me_this_from_actual_objs(object_to_find)
 
-            self.gen_path_img_fname = self.test_data_dir + "/" + str(i + 1) + "_of_" + str(
-                num_times) + "_" + object_name.replace(" ", "_") + "_" + self.scene_id + ".png"
+            # Did we get an actual object to navigate to?
+            print("Object selected: ", object_name, " Object located: ", (actual_object is not None), " wanted_room: ", wanted_room)
+            room_where_required_object_is = None
+            end_point_room = None
 
-            self.visualise_path(path, self.gen_path_img_fname)
+            if actual_object is not None:
+                # what room is the location of the selected object?
+                #print((actual_object['position'], actual_object['rotation']))
+                convert_pose_set2tuple((actual_object['position'], actual_object['rotation']))[0]
+                room_where_required_object_is = what_room_is_point_in_ground_truth(self.rooms, convert_pose_set2tuple(path[-1])[0])
+                print("room_where_required_object_is: ", room_where_required_object_is)
+
+            if path is not None:
+                # We can only evaluate planned path if it exists
+                end_point_room = what_room_is_point_in_ground_truth(self.rooms, convert_pose_set2tuple(path[-1])[0])
+                print("END POINT IN: ", end_point_room, " WANTED: ", wanted_room)
+
+                self.gen_path_img_fname = self.test_data_dir + "/" + str(i + 1) + "_of_" + str(
+                    num_times) + "_" + object_to_find.replace(" ", "_") + "_" + self.scene_id + ".png"
+
+                self.visualise_path(path, self.gen_path_img_fname)
+
+            # Now we can evaluate 3 error types.
+            # TYPE1: No room was selected, from the available ones (usually due to LLM not giving an interpretable answer)
+            # TYPE2: No object was selected from the available ones (usually due to LLM not giving an interpretable answer)
+            # TYPE3: Object was selected, but it is in a different room than was expected (usually due to room mis-classification)
+            # TYPE4: Path was generated, but it led to a different room than initially expected (usually due to path planning leading to a vicinity of the target, but in a different room)
+            score_for_this_run = 0
+            if wanted_room is not None: # test for TYPE1 error
+                score_for_this_run += 1
+                if actual_object is not None: # test for TYPE2 error
+                    score_for_this_run += 1
+                    if room_where_required_object_is == wanted_room: # test for TYPE3 error
+                        score_for_this_run += 1
+                        if end_point_room == wanted_room: # test for TYPE4 error
+                            score_for_this_run += 1
+
+            print("score_for_this_run: ", score_for_this_run)
+
+            result_dict = {
+                "object_to_find": object_to_find,
+                "selected_room": wanted_room,
+                "selected_object_name": object_name,
+                "room_where_selected_object_is": room_where_required_object_is,
+                "path_end_point_room": end_point_room,
+                "score_for_this_run": score_for_this_run
+            }
+
+            results.append(result_dict)
 
         pickle.dump(results, open(self.results_fname, "wb"))
         return results
@@ -336,8 +490,8 @@ class SemanticPathPlanner:
             return False
 
 if __name__ == "__main__":
-    spp = SemanticPathPlanner("train_55", LLMType.LLAMA)
+    spp = SemanticPathPlanner("train_55", LLMType.LLAMA, "CHAMELEON_p_cot_6lbl_img_middle")
     #path = spp.bring_me_a_bottle_of_beer()
-    #spp.test_goal_finding(1, "A fresh, cold, unopened bottle of beer")
-    spp.test_goal_finding(1, "a baseball bat")
+    #spp.test_goal_finding(2, "A fresh, cold, unopened bottle of beer")
+    spp.test_goal_finding(10, "pocket calculator")
     #spp.visualise_path(path)
