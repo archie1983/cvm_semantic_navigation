@@ -1,6 +1,5 @@
-import os
-import pickle
-import prior
+import os, pickle, prior, time, re
+from pathlib import Path
 
 from llm_room_classifier import LLMRoomClassifier, LLMType
 from room_type import RoomType
@@ -116,7 +115,12 @@ class SemanticPathPlanner:
         #print(obj)
         self.last_goal_position = obj["position"]
 
-        return get_shortest_path_to_object(self.controller, obj["objectId"], start_position, start_rotation)
+        try:
+            path = get_shortest_path_to_object(self.controller, obj["objectId"], start_position, start_rotation)
+        except ValueError:
+            path = None
+
+        return path
 
     def get_path_to(self, object_type):
         #return get_shortest_path_to_object_type(controller, object_id, start_position, start_rotation, **{"return_plan": return_plan})
@@ -137,10 +141,10 @@ class SemanticPathPlanner:
     def bring_me_a_bottle_of_beer(self):
         work_scene = self.scene_description
 
-        room_to_look_in = self.lrc.where_to_find_this("A bottle of beer")
+        room_to_look_in, full_text = self.lrc.where_to_find_this("A bottle of beer")
         object_names_to_look_at = work_scene.getAllVisibleObjectNamesInThisRoom(ClassifierType.LLM, room_to_look_in)
         print(object_names_to_look_at)
-        object_to_look_at = self.lrc.where_to_look_first("A fresh, cold, unopened bottle of beer", object_names_to_look_at)
+        object_to_look_at, full_text_obj = self.lrc.where_to_look_first("A fresh, cold, unopened bottle of beer", object_names_to_look_at)
 
         path = self.get_path_to(object_to_look_at)
         #path = self.get_path_to("Fridge")
@@ -154,11 +158,11 @@ class SemanticPathPlanner:
     def bring_me_a_bottle_of_beer_from_actual_objs(self):
         work_scene = self.scene_description
 
-        room_to_look_in = self.lrc.where_to_find_this("A bottle of beer")
+        room_to_look_in, full_text = self.lrc.where_to_find_this("A bottle of beer")
         object_names_to_look_at = work_scene.getAllVisibleObjectNamesInThisRoom(ClassifierType.LLM, room_to_look_in)
         actual_objects_to_look_at = work_scene.getAllVisibleObjectsInThisRoom(ClassifierType.LLM, room_to_look_in)
         print(object_names_to_look_at)
-        object_to_look_at = self.lrc.where_to_look_first("A fresh, cold, unopened bottle of beer", object_names_to_look_at)
+        object_to_look_at, full_text_obj = self.lrc.where_to_look_first("A fresh, cold, unopened bottle of beer", object_names_to_look_at)
 
         for obj in actual_objects_to_look_at:
             if obj["objectType"] == object_to_look_at:
@@ -178,10 +182,10 @@ class SemanticPathPlanner:
     def bring_me_hair_pin(self):
         work_scene = self.scene_description
 
-        room_to_look_in = self.lrc.where_to_find_this("Hair pin")
+        room_to_look_in, full_text = self.lrc.where_to_find_this("Hair pin")
         object_names_to_look_at = work_scene.getAllVisibleObjectNamesInThisRoom(ClassifierType.LLM, room_to_look_in)
         print(object_names_to_look_at)
-        object_to_look_at = self.lrc.where_to_look_first("Hair pin", object_names_to_look_at)
+        object_to_look_at, full_text_obj = self.lrc.where_to_look_first("Hair pin", object_names_to_look_at)
 
         path = self.get_path_to(object_to_look_at)
         #path = self.get_path_to("Fridge")
@@ -195,10 +199,10 @@ class SemanticPathPlanner:
     def bring_me_this(self, what_to_bring):
         work_scene = self.scene_description
 
-        room_to_look_in = self.lrc.where_to_find_this(what_to_bring)
+        room_to_look_in, full_text = self.lrc.where_to_find_this(what_to_bring)
         object_names_to_look_at = work_scene.getAllVisibleObjectNamesInThisRoom(ClassifierType.LLM, room_to_look_in)
         #print(object_names_to_look_at)
-        object_to_look_at = self.lrc.where_to_look_first(what_to_bring, object_names_to_look_at)
+        object_to_look_at, full_text_obj = self.lrc.where_to_look_first(what_to_bring, object_names_to_look_at)
 
         path = self.get_path_to(object_to_look_at)
         #path = self.get_path_to("Fridge")
@@ -283,25 +287,25 @@ class SemanticPathPlanner:
         work_scene = self.scene_description # the earlier processed scene using LLM
 
         # Query LLM for a room where we need to look for the wanted item (can be RoomType.NOT_KNOWN)
-        room_to_look_in = self.lrc.where_to_find_this(what_to_bring)
+        room_to_look_in, full_text_room = self.lrc.where_to_find_this(what_to_bring)
 
         if not (room_to_look_in in RoomType.all_options(False)):
             # If the chosen room is not one of: Bathroom, Kitchen, Living Room, Bedroom, then stop here.
-            return (None, None, None, None)
+            return (None, None, None, None, full_text_room, None)
 
         # All visible objects (names only) in the room that was selected (can be empty set)
         #object_names_to_look_at = work_scene.getAllVisibleObjectNamesInThisRoom(ClassifierType.LLM, room_to_look_in)
         object_names_to_look_at = self.getAllVisibleObjectNamesInThisRoom_hyb(room_to_look_in)
         if len(object_names_to_look_at) < 1:
             # If there are no object names in the selected room, then stop here.
-            return (None, room_to_look_in, None, None)
+            return (None, room_to_look_in, None, None, full_text_room, None)
 
         # A list of all visible actual objects in the selected room (can be empty list)
         #actual_objects_to_look_at = work_scene.getAllVisibleObjectsInThisRoom(ClassifierType.LLM, room_to_look_in)
         actual_objects_to_look_at = self.getAllVisibleObjectsInThisRoom_hyb(room_to_look_in)
         #print(object_names_to_look_at)
         # Query LLM for the object name from object_names_to_look_at list that is closest match for the wanted object
-        object_to_look_at = self.lrc.where_to_look_first(what_to_bring, object_names_to_look_at)
+        object_to_look_at, full_text_obj = self.lrc.where_to_look_first(what_to_bring, object_names_to_look_at)
 
         # Select an actual object based on the chosen object name
         needed_obj = None
@@ -317,7 +321,7 @@ class SemanticPathPlanner:
         else:
             path = None
 
-        return (path, room_to_look_in, object_to_look_at, needed_obj)
+        return (path, room_to_look_in, object_to_look_at, needed_obj, full_text_room, full_text_obj)
 
     ##
     # For display purposes - the top down view of the habitat
@@ -411,26 +415,86 @@ class SemanticPathPlanner:
         return self.controller
 
     ##
+    # Extracts item name from its pickle file
+    ##
+    def extract_item_name(self, filename):
+        """Extracts the item name from the filename (e.g., 'oven_mitts' from '20_oven_mitts_train_55.pkl')."""
+        pattern = r"\d+_(.*?)_train_\d+\.pkl"
+        match = re.match(pattern, filename)
+        if match:
+            return match.group(1).replace("_", " ")  # Convert underscores to spaces
+        return None
+
+    ##
+    # Finds processed items from their pickle files
+    ##
+    def find_processed_items(self, root_dir="."):
+        """Scans subfolders for .pkl files and organizes them by room type."""
+        completed_items = {
+            "Kitchen": [],
+            "Bathroom": [],
+            "Living Room": [],
+            "Bedroom": []
+        }
+
+        for room in completed_items.keys():
+            room_dir = Path(root_dir) / room
+            if not room_dir.exists():
+                continue  # Skip if the subfolder doesn't exist
+
+            for file in room_dir.glob("*.pkl"):
+                item_name = self.extract_item_name(file.name)
+                if item_name:
+                    completed_items[room].append(item_name)
+
+        return completed_items
+
+    ##
     # Test finding some object 100 times.
     # Store both the selected room and the selected object.
     ##
-    def test_goal_finding(self, num_times = 100, object_to_find = "bottle of beer"):
+    def test_goal_finding(self, num_times = 100, object_to_find = "bottle of beer", str_expected_room = ""):
         results = []
-        self.test_data_dir = self.data_store_dir + "/test_" + self.LLM_TYPE
+        progress_pkl = "1.pkl"
+
+        self.test_data_main_dir = self.data_store_dir + "/test_" + self.LLM_TYPE
+
+        if (str_expected_room == ""):
+            self.test_data_dir = self.test_data_main_dir
+        else:
+            # Let's check if we have any work already done and maybe we need to skip this object
+            progress_pkl = self.test_data_main_dir + "/completed_items.pkl"
+            if os.path.exists(progress_pkl):
+                f = open(progress_pkl, 'rb')
+                completed_items = pickle.load(f)
+            else:
+                completed_items = self.find_processed_items(self.test_data_main_dir)
+
+            print("Completed items: ", completed_items)
+
+            # If we have this item for this room type already, then skip
+            if (object_to_find in completed_items[str_expected_room]):
+                return
+
+            self.test_data_dir = self.test_data_main_dir + "/" + str_expected_room
+            expected_room = RoomType.parse_llm_response(str_expected_room, 0, False)
+
         if not os.path.exists(self.test_data_dir):
             os.makedirs(self.test_data_dir)
 
         self.results_fname = self.test_data_dir + "/" + str(num_times) + "_" + object_to_find.replace(" ", "_") + "_" + self.scene_id + ".pkl"
 
         for i in range(num_times):
-            (path, wanted_room, object_name, actual_object) = self.bring_me_this_from_actual_objs(object_to_find)
+            qry_start = time.time()
+            (path, wanted_room, object_name, actual_object, full_text_room, full_text_obj) = self.bring_me_this_from_actual_objs(object_to_find)
+            qry_time_taken = qry_start - time.time()
 
             # Did we get an actual object to navigate to?
             print("Object selected: ", object_name, " Object located: ", (actual_object is not None), " wanted_room: ", wanted_room)
             room_where_required_object_is = None
             end_point_room = None
 
-            if actual_object is not None:
+            if actual_object is not None and path is not None:
                 # what room is the location of the selected object?
                 #print((actual_object['position'], actual_object['rotation']))
                 convert_pose_set2tuple((actual_object['position'], actual_object['rotation']))[0]
@@ -445,16 +509,19 @@ class SemanticPathPlanner:
                 self.gen_path_img_fname = self.test_data_dir + "/" + str(i + 1) + "_of_" + str(
                     num_times) + "_" + object_to_find.replace(" ", "_") + "_" + self.scene_id + ".png"
 
-                self.visualise_path(path, self.gen_path_img_fname)
+                #self.visualise_path(path, self.gen_path_img_fname)
 
-            # Now we can evaluate 3 error types.
+            # Now we can evaluate 5 error types.
             # TYPE1: No room was selected, from the available ones (usually due to LLM not giving an interpretable answer)
             # TYPE2: No object was selected from the available ones (usually due to LLM not giving an interpretable answer)
             # TYPE3: Object was selected, but it is in a different room than was expected (usually due to room mis-classification)
             # TYPE4: Path was generated, but it led to a different room than initially expected (usually due to path planning leading to a vicinity of the target, but in a different room)
+            # TYPE5: LLM made its decisions and navigated to where it navigated, but it ended up not where we (humans) expected.
             score_for_this_run = 0
             if wanted_room is not None: # test for TYPE1 error
                 score_for_this_run += 1
+                if expected_room == wanted_room:  # test for TYPE5 error
+                    score_for_this_run += 1
                 if actual_object is not None: # test for TYPE2 error
                     score_for_this_run += 1
                     if room_where_required_object_is == wanted_room: # test for TYPE3 error
@@ -466,14 +533,22 @@ class SemanticPathPlanner:
 
             result_dict = {
                 "object_to_find": object_to_find,
+                "expected_room": expected_room,
                 "selected_room": wanted_room,
                 "selected_object_name": object_name,
                 "room_where_selected_object_is": room_where_required_object_is,
                 "path_end_point_room": end_point_room,
-                "score_for_this_run": score_for_this_run
+                "score_for_this_run": score_for_this_run,
+                "qry_time": qry_time_taken,
+                "full_text_room": full_text_room,
+                "full_text_obj": full_text_obj
             }
 
             results.append(result_dict)
+
+        if (str_expected_room != ""):
+            completed_items[str_expected_room].append(object_to_find)
+            pickle.dump(completed_items, open(progress_pkl, "wb"))
 
         pickle.dump(results, open(self.results_fname, "wb"))
         return results
@@ -490,8 +565,52 @@ class SemanticPathPlanner:
             return False
 
 if __name__ == "__main__":
+    #spp = SemanticPathPlanner("train_55", LLMType.LLAMA, "CHAMELEON_p_cot_6lbl_img_middle")
     spp = SemanticPathPlanner("train_55", LLMType.LLAMA, "CHAMELEON_p_cot_6lbl_img_middle")
     #path = spp.bring_me_a_bottle_of_beer()
     #spp.test_goal_finding(2, "A fresh, cold, unopened bottle of beer")
-    spp.test_goal_finding(10, "pocket calculator")
+    #spp.test_goal_finding(10, "pocket calculator")
     #spp.visualise_path(path)
+
+    household_items = {
+        "Kitchen": [
+            "tea kettle", "food processor", "stand mixer", "rolling pin", "baking sheet",
+            "pot holders", "oven mitts", "dish towels", "spice rack", "salt shaker",
+            "pepper mill", "cutlery tray", "serving platter", "salad spinner", "ice cream scoop",
+            "grater", "thermos", "lunch boxes", "water pitcher", "paper towel holder",
+            "trash can", "dish soap", "sponge", "scrub brush", "dish drying mat"
+        ],
+        "Bathroom": [
+            "toothbrush holder", "bath towel", "shower curtain",
+            "bath mat", "toilet brush", "plunger", "medicine cabinet",
+            "cotton swabs", "nail clippers", "razor", "shaving cream", "hair dryer",
+            "curling iron", "makeup mirror", "tissue box", "laundry hamper",
+            "facial cleanser", "body wash", "bathrobe", "slippers",
+            "magnifying mirror", "electric toothbrush", "floss", "mouthwash", "first aid kit"
+        ],
+        "Living Room": [
+            "sofa", "coffee table", "recliner", "floor lamp",
+            "throw pillows", "blanket", "bookshelf", "entertainment center",
+            "remote control", "candles", "picture frames", "vase", "clock",
+            "ottoman", "side table", "fireplace tools", "chess set", "board games",
+            "magazine rack", "curtains", "wall art",
+            "DVD player", "gaming console", "throw blanket", "floor cushions"
+        ],
+        "Bedroom": [
+            "nightstand", "dresser", "wardrobe",
+            "alarm clock", "bedside lamp", "jewelry box", "full-length mirror", "laundry basket",
+            "closet organizer", "shoe rack", "hangers", "duvet cover",
+            "blackout curtains", "ceiling fan", "reading chair", "vanity table", "perfume bottles",
+            "tissue box cover", "memory foam topper", "electric blanket", "sleep mask",
+            "ear plugs", "white noise machine", "closet doors", "underbed storage"
+        ]
+    }
+
+    for item in household_items["Kitchen"]:
+        spp.test_goal_finding(100, item, "Kitchen")
+    for item in household_items["Bathroom"]:
+        spp.test_goal_finding(100, item, "Bathroom")
+    for item in household_items["Living Room"]:
+        spp.test_goal_finding(100, item, "Living Room")
+    for item in household_items["Bedroom"]:
+        spp.test_goal_finding(100, item, "Bedroom")

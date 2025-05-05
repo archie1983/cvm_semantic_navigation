@@ -261,6 +261,7 @@ class LLMControl:
 
         full_answer = ""
         ret_answer = None
+        full_answer_unmodified = ""
         cur_chunk = ""
         #ret_answer = -1
 
@@ -278,6 +279,7 @@ class LLMControl:
         #        nums = [int(s) for s in full_answer[ndx:(ndx + 18)].split() if s.isdigit()]
         #        ret_answer = nums[0]
 
+        full_answer_unmodified = full_answer
         ##
         # Find the first occurence of any of the items in the list. This may not be perfect, but probably will do for now
         ##
@@ -307,8 +309,8 @@ class LLMControl:
                 ret_answer = obj.strip()
                 nearest_index = full_answer.upper().find(obj.upper())
 
-        print("NDX: " + str(nearest_index) + " : " + full_answer + " : " + str(object_list) + " ## " + ret_answer)
-        return ret_answer
+        print("NDX: ", str(nearest_index), " : ", full_answer, " : ", str(object_list), " ## ", ret_answer)
+        return ret_answer, full_answer_unmodified
 
     def extract_obj_from_text(object_list, text):
         nearest_index = 1000000
@@ -356,15 +358,15 @@ class LLMControl:
           print(cur_chunk, end='', flush=True)
 
         full_answer = full_answer.replace(".", "")
-        if ("Answer:" in full_answer):
-            ndx = full_answer.index("Answer:")
-
-            if (ndx >= 0 and len(full_answer) > ndx + 13):
-                #ret_answer = full_answer[ndx + 12]
-                nums = [int(s) for s in full_answer[ndx:(ndx + 18)].split() if s.isdigit()]
-                ret_answer = nums[0]
+#        if ("Answer:" in full_answer):
+#            ndx = full_answer.index("Answer:")
+#
+#            if (ndx >= 0 and len(full_answer) > ndx + 13):
+#                #ret_answer = full_answer[ndx + 12]
+#                nums = [int(s) for s in full_answer[ndx:(ndx + 18)].split() if s.isdigit()]
+#                ret_answer = nums[0]
 
         ret_answer = RoomType.parse_llm_response(full_answer)
 
         #print("NDX: " + str(ndx) + " : " + str(len(full_answer)) + " : " + full_answer[ndx + 12] + " ## " + ret_answer)
-        return ret_answer
+        return ret_answer, full_answer

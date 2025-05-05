@@ -4,7 +4,7 @@ from scene_description import SceneDescription
 import shutil, os
 
 def process_scene_files():
-    pkl_store = "experiment_data/test_LLAMA/*.pkl"
+    pkl_store = "experiment_data/test_LLAMA/Kitchen/*.pkl"
 
     pkl_files = glob.glob(pkl_store) # files showing gemma scenes
     #scene_files2 = glob.glob(pkl_store2)
