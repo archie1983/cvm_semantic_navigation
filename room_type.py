@@ -13,6 +13,11 @@ class RoomType(Enum):
     OFFICE = 7
     STORAGE = 8
 
+    def __lt__(self, other):
+        if self.__class__ is other.__class__:
+            return self.value < other.value
+        return NotImplemented
+
     @staticmethod
     def colour_of_room(room_type):
         if room_type == RoomType.LIVING_ROOM:

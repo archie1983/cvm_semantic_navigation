@@ -566,7 +566,8 @@ class SemanticPathPlanner:
 
 if __name__ == "__main__":
     #spp = SemanticPathPlanner("train_55", LLMType.LLAMA, "CHAMELEON_p_cot_6lbl_img_middle")
-    spp = SemanticPathPlanner("train_55", LLMType.LLAMA, "CHAMELEON_p_cot_6lbl_img_middle")
+    #spp = SemanticPathPlanner("train_55", LLMType.MISTRAL_4b, "CHAMELEON_p_cot_6lbl_img_middle")
+    spp = SemanticPathPlanner("train_55", LLMType.GEMMA, "CHAMELEON_p_cot_6lbl_img_middle")
     #path = spp.bring_me_a_bottle_of_beer()
     #spp.test_goal_finding(2, "A fresh, cold, unopened bottle of beer")
     #spp.test_goal_finding(10, "pocket calculator")
