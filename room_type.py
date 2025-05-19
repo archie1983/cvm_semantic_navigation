@@ -13,6 +13,11 @@ class RoomType(Enum):
     OFFICE = 7
     STORAGE = 8
 
+    def __lt__(self, other):
+        if self.__class__ is other.__class__:
+            return self.value < other.value
+        return NotImplemented
+
     @staticmethod
     def colour_of_room(room_type):
         if room_type == RoomType.LIVING_ROOM:
@@ -48,6 +53,14 @@ class RoomType(Enum):
 
     @classmethod
     def parse_llm_response(self, text, skip_chars=0, include_office_and_storage = True):
+        '''
+        Parse LLM response for the room that it has selected. Guarantees a response from
+        one of the labels defined in RoomType enum.
+        :param text: Input text from LLM
+        :param skip_chars: How many characters we want to strip from the beginning
+        :param include_office_and_storage: Whether we want offices and storage spaces included
+        :return: the intrpreted room from the input text (earliest mention of any of the rooms) or NOT_KNOWN if none was found.
+        '''
         ret_val = RoomType.NOT_KNOWN
         nearest_index = 1000000
 
