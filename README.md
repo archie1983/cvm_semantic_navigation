@@ -79,9 +79,8 @@ be selected on line 570.
 
 Finally **analyse_classification_results.ipynb** is where I analyzed room classification experiment 
 results and generated box plots.
-**generate_and_evaluate_datasets.ipynb** is where I generated the SVC.
 
 **goal_selection_evaluation.ipynb** is where I analyzed goal selection experiment results.
 
-**navigation_experiments_maj_revisions.ipynb** and **navigation_experiments.ipynb** contain a number
+**navigation_experiments_maj_revisions.ipynb** and **navigation_experiments.ipynb** contain a number of
 goal selection examples.
