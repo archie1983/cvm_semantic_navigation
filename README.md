@@ -1,3 +1,9 @@
+This project is a continuation of work that was published in [LLM Semantic Navigation](https://github.com/archie1983/llm_semantic_navigation).
+Please check out that repository for code to recreate LLM results.
+The results are stored in a folder structure: "experiment_data/pkl_\<LLM\>/" where "\<LLM\>" is one 
+of the LLM models that we have evaluated. These results (pickle files) have been included in 
+this project, but if you need to re-create them, then the code for that is in the other repository.
+
 The project relies on [AI2-THOR](https://github.com/allenai/ai2thor), [ProcTHOR-10k](https://github.com/allenai/procthor-10k) dataset and several LLMs:
 * Llama3
 * Mistral
@@ -67,13 +73,19 @@ each corresponding to the LLM type that was used for location classification.
 **process_extracted_scenes.py** - Processes data extracted by **extract_scene_data.py** script and 
 re-classifies the data using CVM (VLM) models. The desired VLM can be specified on line 150.
 
-**semantic_path_planner.py** - Uses the points classified by **extract_scene_data.py** 
+**semantic_path_planner.py** - Defines a class that uses the points classified by **extract_scene_data.py** 
 and **process_extracted_scenes.py** to generate a path to an object of interest. 
 It also plots the generated path on top of a top-view habitat image. 
-I used this in the jupyter notebook "environment.ipynb" because running it from command line gave 
-error: about xcb QT plugin that couldn't be started. I didn't have time to fix that, so ran it 
-from jupyter notebook.
+It can be run from Jupyter Notebook or command line. If you run this script on its own from command
+line, then it will go through 100 common household items and run the selected LLM 100 times for each item
+to perform target selection experiment in "train_55" habitat from ProcThor-10k dataset. The LLM can
+be selected on line 570.
 
-Finally **analyse_classification_results.ipynb** is where I analyzed test results and generated 
-box plots.
+Finally **analyse_classification_results.ipynb** is where I analyzed room classification experiment 
+results and generated box plots.
 **generate_and_evaluate_datasets.ipynb** is where I generated the SVC.
+
+**goal_selection_evaluation.ipynb** is where I analyzed goal selection experiment results.
+
+**navigation_experiments_maj_revisions.ipynb** and **navigation_experiments.ipynb** contain a number
+goal selection examples.
