@@ -1,8 +1,10 @@
-import ollama
+import ollama, torch, os
 from enum import Enum
 from room_type import RoomType
 from ml_model_type import MLModelType
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # RTX 4000 only
 
 class LLMType(Enum):
     GEMMA = 1
@@ -50,13 +52,15 @@ class LLMControl:
         # if we have a transformers tag, then we need to load model and tokenizer weights now
         if self.llm_type.transformers_tag() is not None:
             model_name = self.llm_type.transformers_tag()
+
+            device = torch.device("cuda:0")  # RTX 4000
             # load the tokenizer and the model
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_name,
                 torch_dtype="auto",
                 device_map="auto"
-            )
+            ).to(device)
 
     def initialise(self):
         self.prompt_system = """

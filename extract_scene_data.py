@@ -250,8 +250,8 @@ class DataSceneExtractor:
         #print("AE::::::::::::::::::::::;")
 
         # Data processing and saving as Excel
-        df = pd.DataFrame(time_records)
-        df.to_excel(self.data_store_dir + f"/timing_data_{scene_id}.xlsx", index=False)
+        #df = pd.DataFrame(time_records)
+        #df.to_excel(self.data_store_dir + f"/timing_data_{scene_id}.xlsx", index=False)
 
         # store our room points collection into a pickle file
         scene_descr_fname = self.data_store_dir + "/scene_descr_" + scene_id + ".pkl"
