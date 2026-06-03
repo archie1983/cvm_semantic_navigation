@@ -277,5 +277,6 @@ class DataSceneExtractor:
 
 if __name__ == "__main__":
     #dse = DataSceneExtractor(LLMType.LLAMA, CVMType.MOONDREAM, ClassificationMethod.SVC_CVM)
-    dse = DataSceneExtractor(LLMType.LLAMA, CVMType.MOONDREAM, ClassificationMethod.SVC, "data_collection")
+    #dse = DataSceneExtractor(LLMType.QWEN3_06b, CVMType.MOONDREAM, ClassificationMethod.LLM, "data_collection")
+    dse = DataSceneExtractor(LLMType.QWEN3_06b, CVMType.MOONDREAM, ClassificationMethod.LLM)
     dse.process_1_batch_of_data_scenes()

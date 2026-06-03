@@ -2,23 +2,40 @@ import ollama
 from enum import Enum
 from room_type import RoomType
 from ml_model_type import MLModelType
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 class LLMType(Enum):
     GEMMA = 1
     MISTRAL_4b = 2
     MISTRAL_6b = 3
     LLAMA = 4
+    QWEN3_5_08b = 5
+    QWEN3_06b = 6
+    QWEN3_06b_an_finetune = 7
 
     #@classmethod
     def ollama_tag(self):
         if self == LLMType.GEMMA:
             return "gemma:7b-instruct-v1.1-q6_K"
-        if self == LLMType.MISTRAL_4b:
+        elif self == LLMType.MISTRAL_4b:
             return "mistral:7b-instruct-v0.2-q4_0"
-        if self == LLMType.MISTRAL_6b:
+        elif self == LLMType.MISTRAL_6b:
             return "mistral:7b-instruct-v0.2-q6_K"
-        if self == LLMType.LLAMA:
+        elif self == LLMType.LLAMA:
             return "llama3:8b-instruct-q6_K"
+        else:
+            return None
+
+    #@classmethod
+    def transformers_tag(self):
+        if self == LLMType.QWEN3_5_08b:
+            return "Qwen/Qwen3.5-0.8B"
+        elif self == LLMType.QWEN3_06b:
+            return "Qwen/Qwen3-0.6B"
+        elif self == LLMType.QWEN3_06b_an_finetune:
+            return "andresnowak/Qwen3-0.6B-instruction-finetuned"
+        else:
+            return None
 
     @staticmethod
     def type_of_model():
@@ -30,6 +47,16 @@ class LLMControl:
 
     def __init__(self, llm_type):
         self.llm_type = llm_type
+        # if we have a transformers tag, then we need to load model and tokenizer weights now
+        if self.llm_type.transformers_tag() is not None:
+            model_name = self.llm_type.transformers_tag()
+            # load the tokenizer and the model
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                torch_dtype="auto",
+                device_map="auto"
+            )
 
     def initialise(self):
         self.prompt_system = """
@@ -339,32 +366,67 @@ class LLMControl:
 
     def get_answer(self):
         #print("Q CONTROL2: ", self.question)
-        stream = ollama.chat(
-            model = self.llm_type.ollama_tag(),
-            #model='gemma:7b-instruct-q6_K',
-            messages=[
+        if self.llm_type.transformers_tag() is not None:
+            # The LLM that was chosen, lives on huggingface
+            messages = [
                 {"role": "user", "content": self.question}
-            ],
-            stream=True,
-        )
+            ]
+            text = self.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+                enable_thinking=True  # Switches between thinking and non-thinking modes. Default is True.
+            )
+            model_inputs = self.tokenizer([text], return_tensors="pt").to(self.model.device)
 
-        full_answer = ""
-        cur_chunk = ""
-        ret_answer = -1
+            # conduct text completion
+            generated_ids = self.model.generate(
+                **model_inputs,
+                max_new_tokens=32768
+            )
+            output_ids = generated_ids[0][len(model_inputs.input_ids[0]):].tolist()
 
-        for chunk in stream:
-          cur_chunk = chunk['message']['content']
-          full_answer += cur_chunk
-          print(cur_chunk, end='', flush=True)
+            # parsing thinking content
+            try:
+                # rindex finding 151668 (</think>)
+                index = len(output_ids) - output_ids[::-1].index(151668)
+            except ValueError:
+                index = 0
 
-        full_answer = full_answer.replace(".", "")
-#        if ("Answer:" in full_answer):
-#            ndx = full_answer.index("Answer:")
-#
-#            if (ndx >= 0 and len(full_answer) > ndx + 13):
-#                #ret_answer = full_answer[ndx + 12]
-#                nums = [int(s) for s in full_answer[ndx:(ndx + 18)].split() if s.isdigit()]
-#                ret_answer = nums[0]
+            thinking_content = self.tokenizer.decode(output_ids[:index], skip_special_tokens=True).strip("\n")
+            content = self.tokenizer.decode(output_ids[index:], skip_special_tokens=True).strip("\n")
+
+            #print("thinking content:", thinking_content)
+            #print("content:", content)
+            full_answer = content
+        else:
+            # The LLM that was chosen lives on ollama
+            stream = ollama.chat(
+                model = self.llm_type.ollama_tag(),
+                #model='gemma:7b-instruct-q6_K',
+                messages=[
+                    {"role": "user", "content": self.question}
+                ],
+                stream=True,
+            )
+
+            full_answer = ""
+            cur_chunk = ""
+            ret_answer = -1
+
+            for chunk in stream:
+                cur_chunk = chunk['message']['content']
+                full_answer += cur_chunk
+                print(cur_chunk, end='', flush=True)
+
+            full_answer = full_answer.replace(".", "")
+    #        if ("Answer:" in full_answer):
+    #            ndx = full_answer.index("Answer:")
+    #
+    #            if (ndx >= 0 and len(full_answer) > ndx + 13):
+    #                #ret_answer = full_answer[ndx + 12]
+    #                nums = [int(s) for s in full_answer[ndx:(ndx + 18)].split() if s.isdigit()]
+    #                ret_answer = nums[0]
 
         ret_answer = RoomType.parse_llm_response(full_answer)
 
