@@ -211,7 +211,7 @@ class DataSceneExtractor:
             # classify using the appropriate methods
             if (self.classification_method.llm_required() and classify_using_object_list):
                 t0 = time()
-                rt_llm = self.lrc.classify_room_by_this_object_set(objs_at_this_pos)
+                rt_llm, full_text = self.lrc.classify_room_by_this_object_set(objs_at_this_pos)
                 llm_elapsed_time = round(time() - t0, 5)
                 #print("llm predict time:", llm_elapsed_time, "s")
 

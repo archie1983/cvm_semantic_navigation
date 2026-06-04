@@ -74,7 +74,7 @@ class LLMRoomClassifier:
       #print("\n" + str(ans) + " :: " + list(self.room_types.keys())[list(self.room_types.values()).index(ans)])
       #print("\n" + ans.name + " :: " + str(ans.value))
 
-      return ans
+      return ans, full_text
 
   ##
   # Allows us asking the LLM where to find a given object
