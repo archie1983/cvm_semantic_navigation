@@ -371,38 +371,46 @@ class LLMControl:
     def get_answer(self):
         #print("Q CONTROL2: ", self.question)
         if self.llm_type.transformers_tag() is not None:
-            # The LLM that was chosen, lives on huggingface
-            messages = [
-                {"role": "user", "content": self.question}
-            ]
-            text = self.tokenizer.apply_chat_template(
-                messages,
-                tokenize=False,
-                add_generation_prompt=True,
-                enable_thinking=True  # Switches between thinking and non-thinking modes. Default is True.
-            )
-            model_inputs = self.tokenizer([text], return_tensors="pt").to(self.model.device)
+            if self.llm_type == LLMType.QWEN3_06b_an_finetune:
+                max_new_tokens = 500
+                inputs = self.tokenizer(self.question, return_tensors="pt").to(self.model.device)
+                output_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
+                content = self.tokenizer.decode(output_ids[0][-max_new_tokens:], skip_special_tokens=True)
+                full_answer = content[len(self.question):]
+                thinking_content = ""
+            elif self.llm_type == LLMType.QWEN3_06b:
+                # The LLM that was chosen, lives on huggingface
+                messages = [
+                    {"role": "user", "content": self.question}
+                ]
+                text = self.tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=True,
+                    enable_thinking=False  # Switches between thinking and non-thinking modes. Default is True.
+                )
+                model_inputs = self.tokenizer([text], return_tensors="pt").to(self.model.device)
 
-            # conduct text completion
-            generated_ids = self.model.generate(
-                **model_inputs,
-                max_new_tokens=32768
-            )
-            output_ids = generated_ids[0][len(model_inputs.input_ids[0]):].tolist()
+                # conduct text completion
+                generated_ids = self.model.generate(
+                    **model_inputs,
+                    max_new_tokens=32768
+                )
+                output_ids = generated_ids[0][len(model_inputs.input_ids[0]):].tolist()
 
-            # parsing thinking content
-            try:
-                # rindex finding 151668 (</think>)
-                index = len(output_ids) - output_ids[::-1].index(151668)
-            except ValueError:
-                index = 0
+                # parsing thinking content
+                try:
+                    # rindex finding 151668 (</think>)
+                    index = len(output_ids) - output_ids[::-1].index(151668)
+                except ValueError:
+                    index = 0
 
-            thinking_content = self.tokenizer.decode(output_ids[:index], skip_special_tokens=True).strip("\n")
-            content = self.tokenizer.decode(output_ids[index:], skip_special_tokens=True).strip("\n")
+                thinking_content = self.tokenizer.decode(output_ids[:index], skip_special_tokens=True).strip("\n")
+                content = self.tokenizer.decode(output_ids[index:], skip_special_tokens=True).strip("\n")
 
-            #print("thinking content:", thinking_content)
-            #print("content:", content)
-            full_answer = content
+                #print("thinking content:", thinking_content)
+                #print("content:", content)
+                full_answer = content
         else:
             # The LLM that was chosen lives on ollama
             stream = ollama.chat(
