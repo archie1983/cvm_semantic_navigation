@@ -2,7 +2,7 @@ import ollama, torch, os
 from enum import Enum
 from room_type import RoomType
 from ml_model_type import MLModelType
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, Mistral3ForConditionalGeneration, MistralCommonBackend
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # RTX 4000 only
 
@@ -14,6 +14,7 @@ class LLMType(Enum):
     QWEN3_5_08b = 5
     QWEN3_06b = 6
     QWEN3_06b_an_finetune = 7
+    MISTRAL_MINISTRAL_3_8b = 8
 
     #@classmethod
     def ollama_tag(self):
@@ -36,6 +37,8 @@ class LLMType(Enum):
             return "Qwen/Qwen3-0.6B"
         elif self == LLMType.QWEN3_06b_an_finetune:
             return "andresnowak/Qwen3-0.6B-instruction-finetuned"
+        elif self == LLMType.MISTRAL_MINISTRAL_3_8b:
+            return "mistralai/Ministral-3-3B-Reasoning-2512"
         else:
             return None
 
@@ -55,12 +58,19 @@ class LLMControl:
 
             device = torch.device("cuda:0")  # RTX 4000
             # load the tokenizer and the model
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_name,
-                torch_dtype="auto",
-                device_map="auto"
-            ).to(device)
+
+            if self.llm_type == LLMType.MISTRAL_MINISTRAL_3_8b:
+                self.tokenizer = MistralCommonBackend.from_pretrained(model_name)
+                self.model = Mistral3ForConditionalGeneration.from_pretrained(
+                    model_name, torch_dtype=torch.bfloat16, device_map="auto"
+                )
+            else:
+                self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    model_name,
+                    torch_dtype="auto",
+                    device_map="auto"
+                ).to(device)
 
     def initialise(self):
         self.prompt_system = """
@@ -378,7 +388,32 @@ class LLMControl:
                 content = self.tokenizer.decode(output_ids[0][-max_new_tokens:], skip_special_tokens=True)
                 full_answer = content[len(self.question):]
                 thinking_content = ""
-            elif self.llm_type == LLMType.QWEN3_06b:
+            elif self.llm_type == LLMType.MISTRAL_MINISTRAL_3_8b:
+                messages = [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": self.question,
+                            },
+                        ],
+                    },
+                ]
+
+                tokenized = self.tokenizer.apply_chat_template(messages, return_tensors="pt", return_dict=True)
+
+                tokenized["input_ids"] = tokenized["input_ids"].to(device="cuda")
+
+                output = self.model.generate(
+                    **tokenized,
+                    max_new_tokens=512,
+                )[0]
+
+                full_answer = self.tokenizer.decode(output[len(tokenized["input_ids"][0]):])
+                #print(full_answer)
+
+            elif self.llm_type == LLMType.QWEN3_06b or self.llm_type == LLMType.QWEN3_5_08b:
                 # The LLM that was chosen, lives on huggingface
                 messages = [
                     {"role": "user", "content": self.question}
@@ -394,7 +429,7 @@ class LLMControl:
                 # conduct text completion
                 generated_ids = self.model.generate(
                     **model_inputs,
-                    max_new_tokens=32768
+                    max_new_tokens=512
                 )
                 output_ids = generated_ids[0][len(model_inputs.input_ids[0]):].tolist()
 
