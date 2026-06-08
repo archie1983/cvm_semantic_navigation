@@ -42,7 +42,7 @@ class LLMType(Enum):
         elif self == LLMType.MISTRAL_MINISTRAL_3_8b:
             return "mistralai/Ministral-3-3B-Reasoning-2512"
         elif self == LLMType.MISTRAL_MINISTRAL_3_4b:
-            "unsloth/Ministral-3-3B-Instruct-2512-unsloth-bnb-4bit"
+            return "unsloth/Ministral-3-3B-Instruct-2512-unsloth-bnb-4bit"
         else:
             return None
 
@@ -70,6 +70,7 @@ class LLMControl:
                     model_name, torch_dtype=torch.bfloat16, device_map="auto"
                 )
             elif self.llm_type == LLMType.MISTRAL_MINISTRAL_3_4b:
+                self.max_tokens = 100
                 self.tokenizer = MistralCommonBackend.from_pretrained("mistralai/Ministral-3-3B-Reasoning-2512")
                 self.model = Mistral3ForConditionalGeneration.from_pretrained(
                     model_name, device_map="auto"
