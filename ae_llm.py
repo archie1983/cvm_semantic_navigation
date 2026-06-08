@@ -15,6 +15,8 @@ class LLMType(Enum):
     QWEN3_06b = 6
     QWEN3_06b_an_finetune = 7
     MISTRAL_MINISTRAL_3_8b = 8
+    MISTRAL_MINISTRAL_3_4b = 9
+
 
     #@classmethod
     def ollama_tag(self):
@@ -39,6 +41,8 @@ class LLMType(Enum):
             return "andresnowak/Qwen3-0.6B-instruction-finetuned"
         elif self == LLMType.MISTRAL_MINISTRAL_3_8b:
             return "mistralai/Ministral-3-3B-Reasoning-2512"
+        elif self == LLMType.MISTRAL_MINISTRAL_3_4b:
+            "unsloth/Ministral-3-3B-Instruct-2512-unsloth-bnb-4bit"
         else:
             return None
 
@@ -52,6 +56,7 @@ class LLMControl:
 
     def __init__(self, llm_type):
         self.llm_type = llm_type
+        self.max_tokens = 512
         # if we have a transformers tag, then we need to load model and tokenizer weights now
         if self.llm_type.transformers_tag() is not None:
             model_name = self.llm_type.transformers_tag()
@@ -63,6 +68,11 @@ class LLMControl:
                 self.tokenizer = MistralCommonBackend.from_pretrained(model_name)
                 self.model = Mistral3ForConditionalGeneration.from_pretrained(
                     model_name, torch_dtype=torch.bfloat16, device_map="auto"
+                )
+            elif self.llm_type == LLMType.MISTRAL_MINISTRAL_3_4b:
+                self.tokenizer = MistralCommonBackend.from_pretrained("mistralai/Ministral-3-3B-Reasoning-2512")
+                self.model = Mistral3ForConditionalGeneration.from_pretrained(
+                    model_name, device_map="auto"
                 )
             else:
                 self.tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -377,15 +387,16 @@ class LLMControl:
         for chunk in stream:
           print(chunk['message']['content'], end='', flush=True)
 
+    def set_max_tokens(self, max_tokens):
+        self.max_tokens = max_tokens
 
     def get_answer(self):
         #print("Q CONTROL2: ", self.question)
         if self.llm_type.transformers_tag() is not None:
             if self.llm_type == LLMType.QWEN3_06b_an_finetune:
-                max_new_tokens = 500
                 inputs = self.tokenizer(self.question, return_tensors="pt").to(self.model.device)
-                output_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
-                content = self.tokenizer.decode(output_ids[0][-max_new_tokens:], skip_special_tokens=True)
+                output_ids = self.model.generate(**inputs, max_new_tokens=self.max_tokens)
+                content = self.tokenizer.decode(output_ids[0][-self.max_tokens:], skip_special_tokens=True)
                 full_answer = content[len(self.question):]
                 thinking_content = ""
             elif self.llm_type == LLMType.MISTRAL_MINISTRAL_3_8b:
@@ -407,12 +418,36 @@ class LLMControl:
 
                 output = self.model.generate(
                     **tokenized,
-                    max_new_tokens=512,
+                    max_new_tokens=self.max_tokens,
                 )[0]
 
                 full_answer = self.tokenizer.decode(output[len(tokenized["input_ids"][0]):])
                 #print(full_answer)
+            elif self.llm_type == LLMType.MISTRAL_MINISTRAL_3_4b:
+                messages = [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": self.question,
+                            },
+                        ],
+                    },
+                ]
 
+                tokenized = self.tokenizer.apply_chat_template(messages, return_tensors="pt", return_dict=True).to(
+                    self.device)
+
+                tokenized["input_ids"] = tokenized["input_ids"].to(self.device)
+
+                output = self.model.generate(
+                    **tokenized,
+                    max_new_tokens=self.max_tokens,
+                )[0]
+
+                content = self.tokenizer.decode(output[len(tokenized["input_ids"][0]):])
+                thinking_content = ""
             elif self.llm_type == LLMType.QWEN3_06b or self.llm_type == LLMType.QWEN3_5_08b:
                 # The LLM that was chosen, lives on huggingface
                 messages = [
@@ -429,7 +464,7 @@ class LLMControl:
                 # conduct text completion
                 generated_ids = self.model.generate(
                     **model_inputs,
-                    max_new_tokens=512
+                    max_new_tokens=self.max_tokens
                 )
                 output_ids = generated_ids[0][len(model_inputs.input_ids[0]):].tolist()
 
