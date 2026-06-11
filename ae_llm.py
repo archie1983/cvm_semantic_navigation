@@ -280,9 +280,9 @@ class LLMControl:
         """
         #    You should always provide justification
         # You should always provide justification and confidence estimate of your guess
-        question = template.format(query_words)
+        self.question = template.format(query_words)
 
-        return question
+        return self.question
 
     def construct_classifier_question_multi_modal_no_img(self, query_words):
         template = """
@@ -299,9 +299,9 @@ class LLMControl:
         """
         #    You should always provide justification
         # You should always provide justification and confidence estimate of your guess
-        question = template.format(query_words)
+        self.question = template.format(query_words)
 
-        return question
+        return self.question
 
     def construct_classifier_question(self, query_words):
         template = """
