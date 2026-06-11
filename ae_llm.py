@@ -264,7 +264,7 @@ class LLMControl:
         You should always provide justification
         """
 
-    def construct_classifier_question_multi_modal(query_words):
+    def construct_classifier_question_multi_modal(self, query_words):
         template = """
         I observe the following objects while exploring a room:
         {0}, which is shown in the image.
@@ -284,7 +284,7 @@ class LLMControl:
 
         return question
 
-    def construct_classifier_question_multi_modal_no_img(query_words):
+    def construct_classifier_question_multi_modal_no_img(self, query_words):
         template = """
         I observe the following objects while exploring a room.
 
