@@ -16,6 +16,7 @@ class LLMType(Enum):
     QWEN3_06b_an_finetune = 7
     MISTRAL_MINISTRAL_3_8b = 8
     MISTRAL_MINISTRAL_3_4b = 9
+    MISTRAL_MINISTRAL_3_4b_cor_tok = 10
 
 
     #@classmethod
@@ -42,6 +43,8 @@ class LLMType(Enum):
         elif self == LLMType.MISTRAL_MINISTRAL_3_8b:
             return "mistralai/Ministral-3-3B-Reasoning-2512"
         elif self == LLMType.MISTRAL_MINISTRAL_3_4b:
+            return "unsloth/Ministral-3-3B-Instruct-2512-unsloth-bnb-4bit"
+        elif self == LLMType.MISTRAL_MINISTRAL_3_4b_cor_tok:
             return "unsloth/Ministral-3-3B-Instruct-2512-unsloth-bnb-4bit"
         else:
             return None
@@ -72,6 +75,12 @@ class LLMControl:
             elif self.llm_type == LLMType.MISTRAL_MINISTRAL_3_4b:
                 self.max_tokens = 100
                 self.tokenizer = MistralCommonBackend.from_pretrained("mistralai/Ministral-3-3B-Reasoning-2512")
+                self.model = Mistral3ForConditionalGeneration.from_pretrained(
+                    model_name, device_map="auto"
+                )
+            elif self.llm_type == LLMType.MISTRAL_MINISTRAL_3_4b_cor_tok:
+                self.max_tokens = 100
+                self.tokenizer = MistralCommonBackend.from_pretrained("mistralai/Ministral-3-3B-Instruct-2512")
                 self.model = Mistral3ForConditionalGeneration.from_pretrained(
                     model_name, device_map="auto"
                 )
@@ -424,7 +433,7 @@ class LLMControl:
 
                 full_answer = self.tokenizer.decode(output[len(tokenized["input_ids"][0]):])
                 #print(full_answer)
-            elif self.llm_type == LLMType.MISTRAL_MINISTRAL_3_4b:
+            elif self.llm_type == LLMType.MISTRAL_MINISTRAL_3_4b or self.llm_type == LLMType.MISTRAL_MINISTRAL_3_4b_cor_tok:
                 messages = [
                     {
                         "role": "user",
@@ -437,17 +446,16 @@ class LLMControl:
                     },
                 ]
 
-                tokenized = self.tokenizer.apply_chat_template(messages, return_tensors="pt", return_dict=True).to(
-                    self.device)
+                tokenized = self.tokenizer.apply_chat_template(messages, return_tensors="pt", return_dict=True).to(self.model.device)
 
-                tokenized["input_ids"] = tokenized["input_ids"].to(self.device)
+                tokenized["input_ids"] = tokenized["input_ids"].to(self.model.device)
 
                 output = self.model.generate(
                     **tokenized,
                     max_new_tokens=self.max_tokens,
                 )[0]
 
-                content = self.tokenizer.decode(output[len(tokenized["input_ids"][0]):])
+                full_answer = self.tokenizer.decode(output[len(tokenized["input_ids"][0]):])
                 thinking_content = ""
             elif self.llm_type == LLMType.QWEN3_06b or self.llm_type == LLMType.QWEN3_5_08b:
                 # The LLM that was chosen, lives on huggingface
