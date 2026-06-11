@@ -11,110 +11,139 @@ from room_type import RoomType
 # classifying rooms and the data that is being provided.
 ##
 class LLMRoomClassifier:
-  def __init__(self):
-    self.data_counter = 0
-    self.false_cnt = 0
-    self.true_cnt = 0
+    def __init__(self):
+        self.data_counter = 0
+        self.false_cnt = 0
+        self.true_cnt = 0
 
-    self.stored_labels_loaded = False
+        self.stored_labels_loaded = False
 
-    self.glc = LLMControl(LLMType.MISTRAL_4b)
+        self.glc = LLMControl(LLMType.MISTRAL_4b)
 
-  def __init__(self, llm_type):
-    self.data_counter = 0
-    self.false_cnt = 0
-    self.true_cnt = 0
+    def __init__(self, llm_type):
+        self.data_counter = 0
+        self.false_cnt = 0
+        self.true_cnt = 0
 
-    self.stored_labels_loaded = False
+        self.stored_labels_loaded = False
 
-    self.glc = LLMControl(llm_type)
+        self.glc = LLMControl(llm_type)
 
     #########################################################
 
-  def load_stored_data(self):
-    if (not self.stored_labels_loaded):
-        self.stored_labels_loaded = True
-        # read our labels from a pickle file
-        self.labels_fname = "pkl/labels_shuffled.pkl"
-        self.features_fname = "pkl/features_for_each_label.pkl"
+    def load_stored_data(self):
+        if (not self.stored_labels_loaded):
+            self.stored_labels_loaded = True
+            # read our labels from a pickle file
+            self.labels_fname = "pkl/labels_shuffled.pkl"
+            self.features_fname = "pkl/features_for_each_label.pkl"
 
-        file = open(self.features_fname,'rb')
-        self.features_for_each_label = pickle.load(file)
-        file.close()
+            file = open(self.features_fname,'rb')
+            self.features_for_each_label = pickle.load(file)
+            file.close()
 
-        file = open(self.labels_fname,'rb')
-        self.labels_shuffled = pickle.load(file)
-        file.close()
+            file = open(self.labels_fname,'rb')
+            self.labels_shuffled = pickle.load(file)
+            file.close()
 
     #print(self.labels_shuffled[119] + " @@@@ " + self.features_for_each_label[119])
 
-  def get_next_data_item(self):
-      self.load_stored_data()
-      if (self.data_counter < len(self.labels_shuffled)):
-          ret_tuple = (self.labels_shuffled[self.data_counter], self.features_for_each_label[self.data_counter])
-          self.data_counter += 1
-          return ret_tuple
-      else:
-          return ("", "")
+    def get_next_data_item(self):
+        self.load_stored_data()
+        if (self.data_counter < len(self.labels_shuffled)):
+            ret_tuple = (self.labels_shuffled[self.data_counter], self.features_for_each_label[self.data_counter])
+            self.data_counter += 1
+            return ret_tuple
+        else:
+            return ("", "")
 
-  def classify_room_by_this_object_set(self, obj_set):
-      # now we'll get the objects into a string separated by a space
-      objs_in_room_as_string = ""
-      for obj in obj_set:
-          objs_in_room_as_string += obj + ", "
+    def classify_room_by_this_object_set(self, obj_set):
+        # now we'll get the objects into a string separated by a space
+        objs_in_room_as_string = ""
+        for obj in obj_set:
+            objs_in_room_as_string += obj + ", "
 
-      objs_in_room_as_string = objs_in_room_as_string[:-2]
+        objs_in_room_as_string = objs_in_room_as_string[:-2]
 
-      self.glc.construct_classifier_question(objs_in_room_as_string)
+        self.glc.construct_classifier_question(objs_in_room_as_string)
 
-      #t0 = time()
-      ans, full_text = self.glc.get_answer()
-      #print("llm predict time:", round(time()-t0, 3), "s")
+        #t0 = time()
+        ans, full_text = self.glc.get_answer()
+        #print("llm predict time:", round(time()-t0, 3), "s")
 
-      #print("\n" + str(ans) + " :: " + list(self.room_types.keys())[list(self.room_types.values()).index(ans)])
-      #print("\n" + ans.name + " :: " + str(ans.value))
+        #print("\n" + str(ans) + " :: " + list(self.room_types.keys())[list(self.room_types.values()).index(ans)])
+        #print("\n" + ans.name + " :: " + str(ans.value))
 
-      return ans, full_text
+        return ans, full_text
 
-  ##
-  # Allows us asking the LLM where to find a given object
-  ##
-  def where_to_find_this(self, object_name):
-      self.glc.construct_room_selector_question(object_name)
-      ans, full_text = self.glc.get_answer()
+    def classify_room_by_this_object_set_and_pic(self, obj_set, img_uri = None):
+        # now we'll get the objects into a string separated by a space
+        objs_in_room_as_string = ""
+        for obj in obj_set:
+            objs_in_room_as_string += obj + ", "
 
-      return ans, full_text
+        objs_in_room_as_string = objs_in_room_as_string[:-2]
 
-  def where_to_look_first(self, what_to_look_for, obj_list_to_explore):
-      objs_to_look_near = ""
-      for obj in obj_list_to_explore:
-          objs_to_look_near += obj + ", "
+        if img_uri is None:
+            self.glc.construct_classifier_question_multi_modal_no_img(objs_in_room_as_string)
+        else:
+            self.glc.construct_classifier_question_multi_modal(objs_in_room_as_string)
 
-      objs_to_look_near = objs_to_look_near[:-2]
+        #t0 = time()
+        ans, full_text = self.glc.get_answer(img_uri)
 
-      self.glc.construct_object_selector_question(what_to_look_for, objs_to_look_near)
-      ans, full_answer_unmodified = self.glc.get_object_selector_answer(obj_list_to_explore)
+        ## Re-parse the full text for the answer, because for these multi-modal LLMs we ask to precede
+        # the correct answer with a $ sign - because they're quite chatty and mention all sorts of rooms before
+        # the final answer.
+        if "$" in full_text:
+            txt_to_parse = full_text[full_text.index("$"):]
+            ans = RoomType.parse_llm_response(txt_to_parse)
+        #print("llm predict time:", round(time()-t0, 3), "s")
 
-      print("ANS: ", ans)
-      return ans, full_answer_unmodified
+        #print("\n" + str(ans) + " :: " + list(self.room_types.keys())[list(self.room_types.values()).index(ans)])
+        #print("\n" + ans.name + " :: " + str(ans.value))
 
-  def test_classification_on_stored_data(self):
-      self.load_stored_data()
-      for i in range(len(self.labels_shuffled)):
-          (label, features) = rc.get_next_data_item()
-          #if (i >= 118):
-          print(label + " :: " + features)
-          self.glc.construct_classifier_question(features)
-          ans, full_text = self.glc.get_answer()
-          #print("\n" + str(i) + ") ANS: " + label + " " + str(ans) + " ## " + str(self.room_types.get(label)) + " # " + " @@ " + str(self.room_types.get(label) == ans))
-          print("\n" + str(i) + ") ANS: " + label + " " + ans.name + " ## " + str(ans.value) + " # " + " @@ " + str(RoomType.interpret_label(label) == ans))
+        return ans, full_text
 
-          if (RoomType.interpret_label(label) == ans):
-              self.true_cnt += 1
-          else:
-              self.alse_cnt += 1
+    ##
+    # Allows us asking the LLM where to find a given object
+    ##
+    def where_to_find_this(self, object_name):
+        self.glc.construct_room_selector_question(object_name)
+        ans, full_text = self.glc.get_answer()
 
-      print("TRUE CNT: " + str(self.true_cnt) + " :: False CNT: " + str(self.false_cnt))
+        return ans, full_text
+
+    def where_to_look_first(self, what_to_look_for, obj_list_to_explore):
+        objs_to_look_near = ""
+        for obj in obj_list_to_explore:
+            objs_to_look_near += obj + ", "
+
+        objs_to_look_near = objs_to_look_near[:-2]
+
+        self.glc.construct_object_selector_question(what_to_look_for, objs_to_look_near)
+        ans, full_answer_unmodified = self.glc.get_object_selector_answer(obj_list_to_explore)
+
+        print("ANS: ", ans)
+        return ans, full_answer_unmodified
+
+    def test_classification_on_stored_data(self):
+        self.load_stored_data()
+        for i in range(len(self.labels_shuffled)):
+            (label, features) = rc.get_next_data_item()
+            #if (i >= 118):
+            print(label + " :: " + features)
+            self.glc.construct_classifier_question(features)
+            ans, full_text = self.glc.get_answer()
+            #print("\n" + str(i) + ") ANS: " + label + " " + str(ans) + " ## " + str(self.room_types.get(label)) + " # " + " @@ " + str(self.room_types.get(label) == ans))
+            print("\n" + str(i) + ") ANS: " + label + " " + ans.name + " ## " + str(ans.value) + " # " + " @@ " + str(RoomType.interpret_label(label) == ans))
+
+            if (RoomType.interpret_label(label) == ans):
+                self.true_cnt += 1
+            else:
+                self.alse_cnt += 1
+
+        print("TRUE CNT: " + str(self.true_cnt) + " :: False CNT: " + str(self.false_cnt))
 
 
 if __name__ == "__main__":

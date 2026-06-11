@@ -264,6 +264,45 @@ class LLMControl:
         You should always provide justification
         """
 
+    def construct_classifier_question_multi_modal(query_words):
+        template = """
+        I observe the following objects while exploring a room:
+        {0}, which is shown in the image.
+
+        What kind of room is this?
+
+        1. Living room
+        2. Kitchen
+        3. Bedroom
+        4. Bathroom
+
+        Please precede the final answer with a $ sign.
+        """
+        #    You should always provide justification
+        # You should always provide justification and confidence estimate of your guess
+        question = template.format(query_words)
+
+        return question
+
+    def construct_classifier_question_multi_modal_no_img(query_words):
+        template = """
+        I observe the following objects while exploring a room.
+
+        What kind of room is this?
+
+        1. Living room
+        2. Kitchen
+        3. Bedroom
+        4. Bathroom
+
+        Please precede the final answer with a $ sign.
+        """
+        #    You should always provide justification
+        # You should always provide justification and confidence estimate of your guess
+        question = template.format(query_words)
+
+        return question
+
     def construct_classifier_question(self, query_words):
         template = """
         I observe the following objects while exploring a room:

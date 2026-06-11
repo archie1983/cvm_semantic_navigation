@@ -175,8 +175,8 @@ class DataSceneProcessor:
             objs_at_this_pos = set(objs_at_this_pos)
             #objs_at_this_pos = {obj.strip() for obj in objs_at_this_pos}
             if (objs_at_this_pos.issubset(self.common_objs)):
-                print("Only common objects -- skipping")
-                classify_using_object_list = False
+                print("Only common objects -- not skipping this time, but classifying with image too")
+                #classify_using_object_list = False
 
             # initialise result variables
             rt_llm = RoomType.NOT_CLASSIFIED
@@ -191,7 +191,7 @@ class DataSceneProcessor:
             # classify using the appropriate methods
             if (self.classification_method.llm_required() and classify_using_object_list):
                 t0 = time.time()
-                rt_llm, llm_text = self.lrc.classify_room_by_this_object_set(objs_at_this_pos)
+                rt_llm, llm_text = self.lrc.classify_room_by_this_object_set_and_pic(objs_at_this_pos, img_url)
                 llm_elapsed_time = round(time.time() - t0, 5)
                 print("Room Type new LLM: " + rt_llm.name, " llm predict time: ", llm_elapsed_time, " s")
 
