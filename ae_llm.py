@@ -123,7 +123,7 @@ class LLMControl:
                     )
 
                 self.processor = AutoProcessor.from_pretrained(
-                    self.model_name,
+                    model_name,
                     fix_mistral_regex=True)
                 self.tokenizer = None
             else:
