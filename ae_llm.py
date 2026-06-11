@@ -2,7 +2,9 @@ import ollama, torch, os
 from enum import Enum
 from room_type import RoomType
 from ml_model_type import MLModelType
-from transformers import AutoModelForCausalLM, AutoTokenizer, Mistral3ForConditionalGeneration, MistralCommonBackend
+from transformers import (AutoModelForCausalLM, AutoTokenizer, Mistral3ForConditionalGeneration,
+                          MistralCommonBackend, BitsAndBytesConfig, AutoProcessor)
+from PIL import Image
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # RTX 4000 only
 
@@ -17,7 +19,10 @@ class LLMType(Enum):
     MISTRAL_MINISTRAL_3_8b = 8
     MISTRAL_MINISTRAL_3_4b = 9
     MISTRAL_MINISTRAL_3_4b_cor_tok = 10
-
+    MINISTRAL_3_3b_instruct_fp8 = 11
+    MINISTRAL_3_3b_reasoning_bf16 = 12
+    MINISTRAL_3_3b_reasoning_nf4 = 13
+    MINISTRAL_3_3b_instruct_nf4 = 14
 
     #@classmethod
     def ollama_tag(self):
@@ -45,6 +50,14 @@ class LLMType(Enum):
         elif self == LLMType.MISTRAL_MINISTRAL_3_4b:
             return "unsloth/Ministral-3-3B-Instruct-2512-unsloth-bnb-4bit"
         elif self == LLMType.MISTRAL_MINISTRAL_3_4b_cor_tok:
+            return "unsloth/Ministral-3-3B-Instruct-2512-unsloth-bnb-4bit"
+        elif self == LLMType.MINISTRAL_3_3b_instruct_fp8:
+            return "mistralai/Ministral-3-3B-Instruct-2512"
+        elif self == LLMType.MINISTRAL_3_3b_reasoning_bf16:
+            return "mistralai/Ministral-3-3B-Reasoning-2512"
+        elif self == LLMType.MINISTRAL_3_3b_reasoning_nf4:
+            return "mistralai/Ministral-3-3B-Reasoning-2512"
+        elif self == LLMType.MINISTRAL_3_3b_instruct_nf4:
             return "unsloth/Ministral-3-3B-Instruct-2512-unsloth-bnb-4bit"
         else:
             return None
@@ -84,6 +97,35 @@ class LLMControl:
                 self.model = Mistral3ForConditionalGeneration.from_pretrained(
                     model_name, device_map="auto"
                 )
+            elif (self.llm_type == LLMType.MINISTRAL_3_3b_instruct_fp8 or
+                  self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_bf16 or
+                  self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_nf4):
+                if self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_nf4:
+                    quantization_config = BitsAndBytesConfig(
+                        load_in_4bit=True,
+                        bnb_4bit_quant_type="nf4",
+                        bnb_4bit_compute_dtype=torch.bfloat16,
+                    )
+                    self.model = Mistral3ForConditionalGeneration.from_pretrained(
+                        model_name,
+                        quantization_config=quantization_config,
+                        torch_dtype=torch.bfloat16,
+                        device_map="auto",
+                        offload_buffers=True
+                    )
+                else:
+                    self.model = Mistral3ForConditionalGeneration.from_pretrained(
+                        model_name,
+                        # quantization_config=quantization_config,
+                        torch_dtype=torch.bfloat16,
+                        device_map="auto",
+                        offload_buffers=True
+                    )
+
+                self.processor = AutoProcessor.from_pretrained(
+                    self.model_name,
+                    fix_mistral_regex=True)
+                self.tokenizer = None
             else:
                 self.tokenizer = AutoTokenizer.from_pretrained(model_name)
                 self.model = AutoModelForCausalLM.from_pretrained(
@@ -400,7 +442,7 @@ class LLMControl:
     def set_max_tokens(self, max_tokens):
         self.max_tokens = max_tokens
 
-    def get_answer(self):
+    def get_answer(self, img_uri = None):
         #print("Q CONTROL2: ", self.question)
         if self.llm_type.transformers_tag() is not None:
             if self.llm_type == LLMType.QWEN3_06b_an_finetune:
@@ -456,6 +498,75 @@ class LLMControl:
                 )[0]
 
                 full_answer = self.tokenizer.decode(output[len(tokenized["input_ids"][0]):])
+                thinking_content = ""
+            elif (self.llm_type == LLMType.MINISTRAL_3_3b_instruct_fp8 or
+                  self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_nf4 or
+                  self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_bf16):
+
+                if img_uri is not None:
+                    image = Image.open(img_uri)  # .convert("RGB")
+                    messages = [
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": self.question,
+                                },
+                                {"type": "image"},
+                            ],
+                        },
+                    ]
+
+                    text = self.processor.apply_chat_template(
+                        messages,
+                        add_generation_prompt=True,
+                    )
+
+                    inputs = self.processor(
+                        text=text,
+                        images=[image],
+                        return_tensors="pt",
+                    )
+                    inputs["pixel_values"] = inputs["pixel_values"].to(dtype=torch.bfloat16)
+                    inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
+
+                    output = self.model.generate(**inputs, max_new_tokens=self.max_tokens)[0]
+
+                    full_answer = self.processor.decode(
+                        output[len(inputs["input_ids"][0]):],
+                        skip_special_tokens=False
+                    )
+                else:
+                    messages = [
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": self.question,
+                                }
+                            ],
+                        },
+                    ]
+
+                    text = self.processor.apply_chat_template(
+                        messages,
+                        add_generation_prompt=True,
+                    )
+
+                    inputs = self.processor(
+                        text=text,
+                        return_tensors="pt",
+                    )
+                    inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
+
+                    output = self.model.generate(**inputs, max_new_tokens=self.max_tokens)[0]
+
+                    full_answer = self.processor.decode(
+                        output[len(inputs["input_ids"][0]):],
+                        skip_special_tokens=False
+                    )
                 thinking_content = ""
             elif self.llm_type == LLMType.QWEN3_06b or self.llm_type == LLMType.QWEN3_5_08b:
                 # The LLM that was chosen, lives on huggingface
