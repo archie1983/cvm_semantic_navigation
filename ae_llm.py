@@ -23,6 +23,7 @@ class LLMType(Enum):
     MINISTRAL_3_3b_reasoning_bf16 = 12
     MINISTRAL_3_3b_reasoning_nf4 = 13
     MINISTRAL_3_3b_instruct_nf4 = 14
+    MINISTRAL_3_3b_instruct_nf4_bnb = 15
 
     #@classmethod
     def ollama_tag(self):
@@ -59,6 +60,8 @@ class LLMType(Enum):
             return "mistralai/Ministral-3-3B-Reasoning-2512"
         elif self == LLMType.MINISTRAL_3_3b_instruct_nf4:
             return "unsloth/Ministral-3-3B-Instruct-2512-unsloth-bnb-4bit"
+        elif self == LLMType.MINISTRAL_3_3b_instruct_nf4_bnb:
+            return "mistralai/Ministral-3-3B-Instruct-2512-BF16"
         else:
             return None
 
@@ -99,8 +102,9 @@ class LLMControl:
                 )
             elif (self.llm_type == LLMType.MINISTRAL_3_3b_instruct_fp8 or
                   self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_bf16 or
-                  self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_nf4):
-                if self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_nf4:
+                  self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_nf4 or
+                  self.llm_type == LLMType.MINISTRAL_3_3b_instruct_nf4_bnb):
+                if self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_nf4 or self.llm_type == LLMType.MINISTRAL_3_3b_instruct_nf4_bnb:
                     quantization_config = BitsAndBytesConfig(
                         load_in_4bit=True,
                         bnb_4bit_quant_type="nf4",
@@ -501,7 +505,8 @@ class LLMControl:
                 thinking_content = ""
             elif (self.llm_type == LLMType.MINISTRAL_3_3b_instruct_fp8 or
                   self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_nf4 or
-                  self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_bf16):
+                  self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_bf16 or
+                  self.llm_type == LLMType.MINISTRAL_3_3b_instruct_nf4_bnb):
 
                 if img_uri is not None:
                     image = Image.open(img_uri)  # .convert("RGB")
