@@ -78,11 +78,12 @@ class LLMRoomClassifier:
 
     def classify_room_by_this_object_set_and_pic(self, obj_set = None, img_uri = None):
         # now we'll get the objects into a string separated by a space
-        objs_in_room_as_string = ""
-        for obj in obj_set:
-            objs_in_room_as_string += obj + ", "
+        if obj_set is not None:
+            objs_in_room_as_string = ""
+            for obj in obj_set:
+                objs_in_room_as_string += obj + ", "
 
-        objs_in_room_as_string = objs_in_room_as_string[:-2]
+            objs_in_room_as_string = objs_in_room_as_string[:-2]
 
         if img_uri is None:
             self.glc.construct_classifier_question_multi_modal_no_img(objs_in_room_as_string)
