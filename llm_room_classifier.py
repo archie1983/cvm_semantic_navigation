@@ -76,7 +76,7 @@ class LLMRoomClassifier:
 
         return ans, full_text
 
-    def classify_room_by_this_object_set_and_pic(self, obj_set, img_uri = None):
+    def classify_room_by_this_object_set_and_pic(self, obj_set = None, img_uri = None):
         # now we'll get the objects into a string separated by a space
         objs_in_room_as_string = ""
         for obj in obj_set:
@@ -87,7 +87,10 @@ class LLMRoomClassifier:
         if img_uri is None:
             self.glc.construct_classifier_question_multi_modal_no_img(objs_in_room_as_string)
         else:
-            self.glc.construct_classifier_question_multi_modal(objs_in_room_as_string)
+            if obj_set is None:
+                self.glc.construct_classifier_question_multi_modal_img_only()
+            else:
+                self.glc.construct_classifier_question_multi_modal(objs_in_room_as_string)
 
         #t0 = time()
         ans, full_text = self.glc.get_answer(img_uri)

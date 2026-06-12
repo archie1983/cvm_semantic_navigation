@@ -287,7 +287,7 @@ class LLMControl:
     def construct_classifier_question_multi_modal_no_img(self, query_words):
         template = """
         I observe the following objects while exploring a room.
-
+        {0}
         What kind of room is this?
 
         1. Living room
@@ -300,6 +300,24 @@ class LLMControl:
         #    You should always provide justification
         # You should always provide justification and confidence estimate of your guess
         self.question = template.format(query_words)
+
+        return self.question
+
+    def construct_classifier_question_multi_modal_img_only(self):
+        template = """
+        I am exploring exploring a room, which is shown in the image
+        What kind of room is this?
+
+        1. Living room
+        2. Kitchen
+        3. Bedroom
+        4. Bathroom
+
+        Please precede the final answer with a $ sign.
+        """
+        #    You should always provide justification
+        # You should always provide justification and confidence estimate of your guess
+        self.question = template
 
         return self.question
 

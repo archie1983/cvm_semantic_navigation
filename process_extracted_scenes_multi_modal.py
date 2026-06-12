@@ -161,13 +161,15 @@ class DataSceneProcessor:
 
             # at first assume that we can use object list to classify
             classify_using_object_list = True
+            classify_using_image = False # use image only when object list is missing
 
             # No point to classify this point if there are no objects
             # We may not want to classify it using SVC or LLM, but a visual
             # CVM might still be able to classify it.
             if (len(objs_at_this_pos) < 1):
-                print("Empty set of objects -- skipping")
+                print("Empty set of objects -- not skipping this time, but classifying with image only")
                 classify_using_object_list = False
+                classify_using_image = True
             # Similarly with common objects only- SVC and LLM can't help here,
             # but CVM might be able to, so continue, just don't use LLM or SVC.
             #print(objs_at_this_pos)
@@ -176,7 +178,8 @@ class DataSceneProcessor:
             #objs_at_this_pos = {obj.strip() for obj in objs_at_this_pos}
             if (objs_at_this_pos.issubset(self.common_objs)):
                 print("Only common objects -- not skipping this time, but classifying with image too")
-                #classify_using_object_list = False
+                classify_using_object_list = False
+                classify_using_image = True
 
             # initialise result variables
             rt_llm = RoomType.NOT_CLASSIFIED
@@ -189,9 +192,16 @@ class DataSceneProcessor:
             cvm_text = ""
 
             # classify using the appropriate methods
-            if (self.classification_method.llm_required() and classify_using_object_list):
+            if (self.classification_method.llm_required()):
                 t0 = time.time()
-                rt_llm, llm_text = self.lrc.classify_room_by_this_object_set_and_pic(objs_at_this_pos, img_url)
+                
+                if classify_using_image and classify_using_object_list:
+                    rt_llm, llm_text = self.lrc.classify_room_by_this_object_set_and_pic(obj_set=objs_at_this_pos, img_uri=img_url)
+                elif classify_using_object_list:
+                    rt_llm, llm_text = self.lrc.classify_room_by_this_object_set_and_pic(obj_set=objs_at_this_pos, img_uri=None)
+                else:
+                    rt_llm, llm_text = self.lrc.classify_room_by_this_object_set_and_pic(obj_set=None, img_uri=img_url)
+
                 llm_elapsed_time = round(time.time() - t0, 5)
                 print("Room Type new LLM: " + rt_llm.name, " llm predict time: ", llm_elapsed_time, " s")
 
