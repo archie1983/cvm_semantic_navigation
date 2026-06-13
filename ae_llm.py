@@ -24,6 +24,7 @@ class LLMType(Enum):
     MINISTRAL_3_3b_reasoning_nf4 = 13
     MINISTRAL_3_3b_instruct_nf4 = 14
     MINISTRAL_3_3b_instruct_nf4_bnb = 15
+    MINISTRAL_3_3b_instruct_bf16 = 16
 
     #@classmethod
     def ollama_tag(self):
@@ -61,6 +62,8 @@ class LLMType(Enum):
         elif self == LLMType.MINISTRAL_3_3b_instruct_nf4:
             return "unsloth/Ministral-3-3B-Instruct-2512-unsloth-bnb-4bit"
         elif self == LLMType.MINISTRAL_3_3b_instruct_nf4_bnb:
+            return "mistralai/Ministral-3-3B-Instruct-2512-BF16"
+        elif self == LLMType.MINISTRAL_3_3b_instruct_bf16:
             return "mistralai/Ministral-3-3B-Instruct-2512-BF16"
         else:
             return None
@@ -103,7 +106,8 @@ class LLMControl:
             elif (self.llm_type == LLMType.MINISTRAL_3_3b_instruct_fp8 or
                   self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_bf16 or
                   self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_nf4 or
-                  self.llm_type == LLMType.MINISTRAL_3_3b_instruct_nf4_bnb):
+                  self.llm_type == LLMType.MINISTRAL_3_3b_instruct_nf4_bnb or
+                  self.llm_type == LLMType.MINISTRAL_3_3b_instruct_bf16):
                 if self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_nf4 or self.llm_type == LLMType.MINISTRAL_3_3b_instruct_nf4_bnb:
                     quantization_config = BitsAndBytesConfig(
                         load_in_4bit=True,
@@ -563,8 +567,8 @@ class LLMControl:
             elif (self.llm_type == LLMType.MINISTRAL_3_3b_instruct_fp8 or
                   self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_nf4 or
                   self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_bf16 or
-                  self.llm_type == LLMType.MINISTRAL_3_3b_instruct_nf4_bnb):
-
+                  self.llm_type == LLMType.MINISTRAL_3_3b_instruct_nf4_bnb or
+                  self.llm_type == LLMType.MINISTRAL_3_3b_instruct_bf16):
                 if img_uri is not None:
                     image = Image.open(img_uri)  # .convert("RGB")
                     messages = [
